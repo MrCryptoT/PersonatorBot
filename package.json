@@ -1,0 +1,11 @@
+{
+  "name": "PersonatorBot",
+  "version": "0.1.0",
+  "description": "Fighting Impersonation",
+  "main": "bot.js",
+  "author": "MrT",
+  "dependencies": {
+    "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
+    "winston": "^3.3.3"
+  }
+}
