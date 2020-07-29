@@ -12,18 +12,18 @@
 
 //Config Area
 var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles to protect
-var Servertocheck = "yourserverid" //Server ID to protect
+var Servertocheck = "serverid" //Server ID to protect
 var Loglevel = "info" //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
 var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //allow the same name if discriminator is not the same 
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
+
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
 var punishaction = "kick" //or "ban" or "warn"
 var knownscamcopypastecontents = ["Hey Libra just released" , ""] //implement this later for the usual "hey libra released" spam
-
 
 //Init Vars for use later
 var Memberstoprotect = []
@@ -77,7 +77,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 //            message: "@Moderators"
 //        });
 //    }
-	if (message.lower === "!banhammer") {
+	if (message === "!banhammer") {
 		Bannedusers = runcheck();
 		logger.debug(Bannedusers)
 		if (Bannedusers == "The following User's got"){
@@ -138,7 +138,7 @@ function runcheck(){
 
 	for (var user in bot.users) {
 		if (Memberstoprotect.includes(bot.users[user].id)) {
-		Membersnamestoprotect += bot.users[user].username.lower;	
+		Membersnamestoprotect += bot.users[user].username;	
 		}
 	}
 
@@ -157,7 +157,6 @@ function runcheck(){
 	//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
 		//check if minimal length is satisfied - if not bail
 		if (usernameplain.length > minnamelengthtoprotect){
-		logger.debug("checking username: " + usernameplain);
 		logger.debug("Member is protected: " + Memberstoprotect.includes(user));
 		//Check if user is a protected member by userid - if so bail
 		if (Memberstoprotect.includes(user) == false) {
@@ -170,7 +169,7 @@ function runcheck(){
 					if (warnforpotentialmatch) {
 						tmpstring += " Warned - similar Names as protected User:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 					}
-					if (bot.users[user].username + bot.users[user].discriminator == bot.users[Memberstoprotect.indexOf(user)].username + bot.users[Memberstoprotect.indexOf(user)].discriminator){
+					if (bot.users[user].username + bot.users[user].discriminator == bot.users[Memberstoprotect[Membersnamestoprotect.indexOf(bot.users[user].username)]].username + bot.users[Memberstoprotect[Membersnamestoprotect.indexOf(bot.users[user].username)]].discriminator){
 							Memberstoban.push(user);
 								MembersIDtoban.push(bot.users[user].id);
 								logger.info("Punishing User: " + user + " : " +  bot.users[user].username);	
