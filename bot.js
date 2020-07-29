@@ -12,9 +12,9 @@
 
 //Config Area
 var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles to protect
-var Servertocheck = "454523192657051668" //Server ID to protect
-var Loglevel = "silly" //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
-var minnamelengthtoprotect = 2; //checks will be ignored if username shorter than this (without discriminator)
+var Servertocheck = "yourserverid" //Server ID to protect
+var Loglevel = "info" //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
+var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //allow the same name if discriminator is not the same 
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
 //req's
