@@ -5,11 +5,11 @@ Tested on windows, tho should run on any OS that supports node.js.
 
 ## Install Dependencies: 
 ### Windows
-```Install Node.js for your OS```
-```git clone https://github.com/MrCryptoT/PersonatorBot.git .```
-```cd PersonatorBot```
-```npm install winston```
-```npm install Woor/discord.io#gateway_v6```
+```Install Node.js for your OS```<br>
+```git clone https://github.com/MrCryptoT/PersonatorBot.git .```<br>
+```cd PersonatorBot```<br>
+```npm install winston```<br>
+```npm install Woor/discord.io#gateway_v6```<br>
 
 ## Configuration
 1) Supply your Auth token in auth.json
