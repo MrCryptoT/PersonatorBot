@@ -1,7 +1,7 @@
 # PersonatorBot
-Discordbot to prevent impersonation of Admins. 
-Currently wrote for a single Server, though that could be expanded.
-Tested on windows, tho should run on any OS that supports node.js.
+Discordbot to prevent impersonation of Admins. <br>
+Currently wrote for a single Server, though that could be expanded.<br>
+Tested on windows, tho should run on any OS that supports node.js.<br>
 
 ## Install Dependencies: 
 ### Windows
