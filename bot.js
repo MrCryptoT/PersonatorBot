@@ -71,24 +71,37 @@ bot.on('guildMemberUpdate', function (oldMember, newMember) {
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
+
+	
 //    if (message === "!Scammer") {
 //        bot.sendMessage({
 //            to: channelID,
 //            message: "@Moderators"
 //        });
 //    }
-	if (message === "!banhammer") {
+	if (message === commandnametotriggerscan) {
 		Bannedusers = runcheck();
 		logger.debug(Bannedusers)
 		if (Bannedusers == "The following User's got"){
-			msgback = "Triggered Autoscan - sadly I couldn't find any suspisiouss matches. Could you kindly let someone know?"
+			msgback = "Triggered Autoscan - sadly I couldn't find any matches. \n If you are sure there is a scammer, could you kindly let someone know?"
+			titlestr = "No Impersonators found Sorry!"
 		} else {
 			msgback = Bannedusers
+			titlestr = "Banned - Thx 4 the help!"
 		}
-        bot.sendMessage({
-            to: channelID,
-            message: msgback
-        });
+       bot.sendMessage({ to:channelID,
+	   embed: {
+		  color: 0x442691,
+		  title: titlestr,
+		  description: msgback,
+		  thumbnail: {
+			  url: ""
+		  },
+		  footer: {
+			  text: "Reported by: " +user + " Thank you alot!",
+		  },
+  }
+});
     }
 });
 
