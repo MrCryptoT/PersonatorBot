@@ -17,13 +17,13 @@ var Loglevel = "info" //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  de
 var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //allow the same name if discriminator is not the same 
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
+var punishaction = "kick" //or "ban" or "warn"
+var knownscamcopypastecontents = ["Hey Libra just released" , ""] //implement this later for the usual "hey libra released" spam
 
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
-var punishaction = "kick" //or "ban" or "warn"
-var knownscamcopypastecontents = ["Hey Libra just released" , ""] //implement this later for the usual "hey libra released" spam
 
 //Init Vars for use later
 var Memberstoprotect = []
