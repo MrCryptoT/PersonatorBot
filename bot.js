@@ -18,13 +18,18 @@ var minnamelengthtoprotect = 6; //checks will be ignored if username shorter tha
 var includediscriminator = false; //allow the same name if discriminator is not the same 
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
 var punishaction = "kick" //or "ban" or "warn"
+var commandprefix = "!"; //Mostly for debugging as scanning takes places when users join or rename
+var commandnametotriggerscan = "banhammer"; //Mostly for debugging as scanning takes places when users join or renamevar commandnametotriggerscan = "!banhammer"; //Mostly for debugging as scanning takes places when users join or rename
+var commandnametoban = "ban" //banning via userid (calling user still needs proper rights)
+var missingrightsnotifytags = "<@&455177482581180428>"; //GroupID to Tag if a user with missing rights calls a ban - if enabled make sure the bot is allowed to use the entered tag
+//<@id> to tag a User instead of a Role
+var tagagrouponmissingrights = true;
 var knownscamcopypastecontents = ["Hey Libra just released" , ""] //implement this later for the usual "hey libra released" spam
 
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
-
 //Init Vars for use later
 var Memberstoprotect = []
 var Membersnamestoprotect = []
@@ -49,6 +54,7 @@ bot.on('ready', function (evt) {
     logger.info('Connected, Bot ready');
     logger.debug('Logged in as: ');
     logger.debug(bot.username + ' - (' + bot.id + ')');
+	//run a check directly on startup in case the bot was down a while
     runcheck();
 });
 
@@ -58,51 +64,201 @@ bot.on('guildMemberAdd', function (member) {
 	    logger.info(member.id + 'ID!');
 	    logger.info(member.username + 'name!');
 		logger.info(member.discriminator + 'name!');
-		//Run a Check now
+		//Run a Check whenever a new user joins
 		runcheck();
 });
 
 //Event fires on a name Change of a User already in our Guild
 bot.on('guildMemberUpdate', function (oldMember, newMember) {
 	    logger.info(oldMember.username + 'renamed to: ' + newMember.username);
-		//Run a Check now
+		//Run a Check whenever a user changes his name
 		runcheck();
 });
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
+	if (message.substring(0, 1) == commandprefix) {
+		logger.silly("entered command region - cmd recognised!");
+		var args = message.substring(1).split(' ');
+        var cmd = args[0];
+		logger.silly("command:  " + cmd);
+	
+	//Mostly a Debuging function to test stuff - also helpfull for the planned known copy paste scam feature (catching libra and co scammers)
+		
+	//Idea to allow a bot to tag mod's if there is a questionable case (for future fuzzy searches with too low matchscore)	
+	//    if (message === "!Scammer") {
+	//        bot.sendMessage({
+	//            to: channelID,
+	//            message: "@Moderators"
+	//        });
+	//    }
 
 	
-//    if (message === "!Scammer") {
-//        bot.sendMessage({
-//            to: channelID,
-//            message: "@Moderators"
-//        });
-//    }
-	if (message === commandnametotriggerscan) {
-		Bannedusers = runcheck();
-		logger.debug(Bannedusers)
-		if (Bannedusers == "The following User's got"){
-			msgback = "Triggered Autoscan - sadly I couldn't find any matches. \n If you are sure there is a scammer, could you kindly let someone know?"
-			titlestr = "No Impersonators found Sorry!"
-		} else {
-			msgback = Bannedusers
-			titlestr = "Banned - Thx 4 the help!"
+	//Additional sanity checks needed: 
+		//is the user already banned? 
+		
+	//Ban users via Tag or ID if they already left the server 
+		if (cmd === commandnametoban) {
+		//	logger.debug("Roles of calling user:");
+			var memberroles = bot.servers[Servertocheck].members[userID].roles;
+		//	logger.debug(memberroles);	
+				var AllRoles = bot.servers[Servertocheck].roles;
+				var IDstoprotect = [];
+				for (var Role in AllRoles) {
+					if (RolestoCheck.includes(AllRoles[Role].name)) {
+						IDstoprotect.push(AllRoles[Role].id);
+					}
+				}
+				userisprotected = false //we assume ass protected users are allowed to ban for now - needs improvement.
+				for (var role in memberroles) {
+				if  (IDstoprotect.includes(memberroles[role])){
+					userisprotected = true
+				}
+	}		
+			if (userisprotected) {
+				// if (message.author.hasPermission("ADMINISTRATOR")) return logger.debug('Calling USER HAS ADMINISTRATOR PERMISSIONS!')
+			//if (message.author.hasPermission("ban")) return logger.debug('Calling USER HAS ban  PERMISSIONS!')
+			
+			const banReason = args.slice(2);
+			logger.silly("entered " + commandnametoban + " command region - cmd recognised!");
+			logger.silly('Arg1 ' + args[1]);
+			logger.silly('Arg2 ' + args[2]);
+			var tagsexist = false;
+			usertoban = "";
+			
+			//if (!banReason) bot.sendMessage('I need a reason to ban them! We ain\'t here false banning people!');
+			
+			//See if there was a Tag
+			if (args[1].substring(0, 3) == '<@!') {
+				logger.silly("we got a tag so ID has other chars in it  -  sanitize");
+				 usertoban = args[1].substring(3, args[1].length -1)	
+				logger.silly('User =  ' + usertoban);
+				tagsexist = true;
+			 } else  {
+				 logger.info("No Tags exist for bancommand, ban by ID: " + args[1]);
+		  }
+		  //no user tagged, assume banning by ID 
+		if (tagsexist == false) {
+					usertoban = args[1]
 		}
-       bot.sendMessage({ to:channelID,
-	   embed: {
-		  color: 0x442691,
-		  title: titlestr,
-		  description: msgback,
-		  thumbnail: {
-			  url: ""
-		  },
-		  footer: {
-			  text: "Reported by: " +user + " Thank you alot!",
-		  },
-  }
-});
-    }
+	//  if (usertoban === message.author.name) bot.sendMessage('You can\'t ban yourself, silly.');
+	//	if (!message.guild.member(usertoban).bannable) bot.sendMessage('I can\'t ban, silly.');
+		   try {  
+		   var usertobanid = {
+					serverID : Servertocheck,
+					userID : usertoban
+					}
+					bot.ban(usertobanid);
+				    logger.silly("trying to ban userid : " + usertoban);
+					bot.sendMessage({
+						to: channelID,
+						embed: {
+						  color: 0x442691,
+						  title: "User Banned!",
+						  description: 'Alright, ' + usertoban + ' has been banned for ' + banReason,
+						  thumbnail: {
+							  url: ""
+						  },
+						  footer: {
+							text: "Reported by: " +user + " Thank you alot!",
+						},
+					}
+                        });	
+				// const modlogChannelID = '454523192661245953'
+				//	if (modlogChannelID.length !== 0) {
+				//		if (client.channels.get(modlogChannelID )) return undefined;
+				//		const banComfirmationEmbedModLog = 
+				//		client.channels.get(modlogChannelID).send({
+				//			embed: {
+				//		Author: '**${msg.author.username} Swinged the ban hammer on **' + usertoban.name,
+				//		color: 0x442691,
+				//		description: '**__A Ban has occoured!__**\n' + '**__Moderator__**: ${user.username}\n' + '**__Rule Breaker__**: ${user.discriminator}\n' + '**__Reason__**: ${reason}\n'
+				//			}
+				//		});
+				//	}	
+				} 
+			catch (error) {
+				bot.sendMessage({
+					to: channelID,
+					embed: {
+					  color: 0x442691,
+					  title: "Couldn't Ban",
+					  description: 'couldn\'t ban User Sorry! Make sure you supply a correct ID or Tag. \n Also we cannot ban a user twice ;)',
+					  thumbnail: {
+						  url: ""
+					  },
+					  footer: {
+						text: "If there is a Scammer feel free to let someone know anyways!",
+						},
+					}
+				});
+				logger.error("couldn't ban User: " + usertoban );
+			 }	
+			}else {
+				var missingrightsmessage = 'Thanks for trying to help' + user + ', however you don\'t have the rights to use this command Sorry.'
+				bot.sendMessage({
+						to: channelID,
+						embed: {
+						  color: 0x442691,
+						  title: "Missing Rights!",
+						  description: missingrightsmessage,
+						   fields: [{
+								name: "Report User ID's",
+								value: "To ensure we can ban Scammers and Impersonators please give us their ID if possible."
+							  },
+							  {
+								name: "How to get User ID's",
+								value: "You can check how to do that in this [Discord Support Topic](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-)."
+							  }
+							}
+							],
+						  thumbnail: {
+							  url: ""
+						  },
+						  footer: {
+							text: "Thanks alot for helping us in the fight against spammers and scammers!",
+						},
+					}
+					});
+				if (tagagrouponmissingrights) {
+					//missingrightsmessage += '\n Could you please take a look ' + missingrightsnotifytags
+					
+					bot.sendMessage({
+						to: channelID,
+						message: "Have a look please: " + missingrightsnotifytags
+					});
+				
+				}	
+			
+			  }
+        }
+
+			if (cmd === commandnametotriggerscan) {
+			Bannedusers = runcheck();
+			logger.debug(Bannedusers)
+			if (Bannedusers == "The following User's got"){
+				msgback = "Triggered Autoscan - sadly I couldn't find any matches. \n If you are sure there is a scammer, could you kindly let someone know?"
+				titlestr = "No Impersonators found Sorry!"
+			} else {
+				msgback = Bannedusers
+				titlestr = "Banned - Thx 4 the help!"
+			}
+			   bot.sendMessage({ to:channelID,
+			   embed: {
+				  color: 0x442691,
+				  title: titlestr,
+				  description: msgback,
+				  thumbnail: {
+					  url: ""
+				  },
+				  footer: {
+					  text: "Reported by: " +user + " Thank you alot!",
+					},
+				}
+			});
+		}
+	}
+	
 });
 
 //Function to actualy build current user Array's and check for same username's
