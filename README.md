@@ -15,5 +15,5 @@ Tested on windows, tho should run on any OS that supports node.js.<br>
 1) Supply your Auth token in auth.json
 2) Replace the Varaibles in the bot.js and supply ServerID to protect users on
 
-## run the Bot
-node bot.js
+## Run the Bot
+```node bot.js```
