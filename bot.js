@@ -170,18 +170,30 @@ function runcheck(){
 						tmpstring += " Warned - similar Names as protected User:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 					}
 					if (bot.users[user].username + bot.users[user].discriminator == bot.users[Memberstoprotect[Membersnamestoprotect.indexOf(bot.users[user].username)]].username + bot.users[Memberstoprotect[Membersnamestoprotect.indexOf(bot.users[user].username)]].discriminator){
-							Memberstoban.push(user);
-								MembersIDtoban.push(bot.users[user].id);
-								logger.info("Punishing User: " + user + " : " +  bot.users[user].username);	
-								//ban users
-								if (punishaction == "ban"){
-									bot.ban(Servertocheck, bot.users[user].id);
-									tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
-								}else {
-									//assume kick
-									bot.kick(Servertocheck, bot.users[user].id);
-									tmpstring += " kicked:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
-									}
+						Memberstoban.push(user);
+						MembersIDtoban.push(bot.users[user].id);
+						logger.info("Punishing User: " + user + " : " +  bot.users[user].username);	
+						//ban users
+						if (punishaction == "ban"){
+							logger.debug(bot.users[user].id);
+							logger.debug(user);
+							var usertoban = {
+							serverID : Servertocheck,
+							userID : bot.users[user].id
+							}
+							bot.ban(usertoban);
+							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
+						}else {
+							//assume kick
+							logger.debug(bot.users[user].id);
+							logger.debug(user);
+								var usertokick = {
+								serverID : Servertocheck,
+								userID : bot.users[user].id
+								}
+							bot.kick(usertokick);
+							tmpstring += " kicked:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
+							}
 					}			
 				} else {
 						Memberstoban.push(user);
@@ -189,11 +201,30 @@ function runcheck(){
 						logger.info("Punishing User: " + user + " : " +  bot.users[user].username);	
 						//ban users
 						if (punishaction == "ban"){
-							bot.ban(Servertocheck, bot.users[user].id);
+								try {
+							logger.debug(bot.users[user].id);
+							logger.debug(user);
+							var usertoban = {
+								serverID : Servertocheck,
+								userID : bot.users[user].id
+								}
+								bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
+							} catch (e) {
+								 logger.debug(e)
+							}
 						}else {
 							//assume kick
-							bot.kick(Servertocheck, bot.users[user].id);
+							//try {
+							logger.debug(bot.users[user].id);
+							logger.debug(user);
+							var usertokick = {
+								serverID : Servertocheck,
+								userID : bot.users[user].id
+								}
+								bot.kick(usertokick);
+								logger.debug("Boolean value of kick command:");
+							logger.debug(bot.kick(Servertocheck, bot.users[user].id));
 							tmpstring += " kicked:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 						}
 					}
