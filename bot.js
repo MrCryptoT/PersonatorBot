@@ -1,5 +1,6 @@
 //Grab the legit Mod/Admin Users and protect them from Impersonation
 //can be expanded on 
+//If someone feels generous, some Coffee donations are never needed, but always appreciated <3 BTC: 1C1zWwmV44vrt4fWxnqa1FPm93kGuFQ6XL
 
 //Approach: 
 //Scan for similar Usernames as in specified Roles and if found kick or Ban (depending on Config) 
@@ -12,24 +13,26 @@
 
 //Config Area
 var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles to protect
-var Servertocheck = "serverid" //Server ID to protect
+var Servertocheck = "ServerID" //Server ID to protect
 var Loglevel = "info" //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
 var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
-var includediscriminator = false; //allow the same name if discriminator is not the same 
+var includediscriminator = false; //disallow the same name even if discriminator is not the same - if true MrT#1234 and MrT#4321 can both be on the Server even if 1 of them is protected
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
-var punishaction = "kick" //or "ban" or "warn"
 var commandprefix = "!"; //Mostly for debugging as scanning takes places when users join or rename
 var commandnametotriggerscan = "banhammer"; //Mostly for debugging as scanning takes places when users join or renamevar commandnametotriggerscan = "!banhammer"; //Mostly for debugging as scanning takes places when users join or rename
 var commandnametoban = "ban" //banning via userid (calling user still needs proper rights)
-var missingrightsnotifytags = "<@&455177482581180428>"; //GroupID to Tag if a user with missing rights calls a ban - if enabled make sure the bot is allowed to use the entered tag
+var missingrightsnotifytags = "<@&455177482581180428>"; //GroupID to Tag if a user with missing rights calls a ban - if enabled make sure thebot is allowed to use the entered tag
 //<@id> to tag a User instead of a Role
 var tagagrouponmissingrights = true;
-var knownscamcopypastecontents = ["Hey Libra just released" , ""] //implement this later for the usual "hey libra released" spam
+var knownscamcopypastecontents = ["Libra just released"] //implement this later for the usual "hey libra released" spam
+var copypastespamprotectionenabled = true;
 
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
+var punishaction = "kick" //or "ban" or "warn"
+
 //Init Vars for use later
 var Memberstoprotect = []
 var Membersnamestoprotect = []
@@ -77,29 +80,8 @@ bot.on('guildMemberUpdate', function (oldMember, newMember) {
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
-	if (message.substring(0, 1) == commandprefix) {
-		logger.silly("entered command region - cmd recognised!");
-		var args = message.substring(1).split(' ');
-        var cmd = args[0];
-		logger.silly("command:  " + cmd);
-	
-	//Mostly a Debuging function to test stuff - also helpfull for the planned known copy paste scam feature (catching libra and co scammers)
-		
-	//Idea to allow a bot to tag mod's if there is a questionable case (for future fuzzy searches with too low matchscore)	
-	//    if (message === "!Scammer") {
-	//        bot.sendMessage({
-	//            to: channelID,
-	//            message: "@Moderators"
-	//        });
-	//    }
-
-	
-	//Additional sanity checks needed: 
-		//is the user already banned? 
-		
-	//Ban users via Tag or ID if they already left the server 
-		if (cmd === commandnametoban) {
-		//	logger.debug("Roles of calling user:");
+	//check if this contains known Spam content 
+	//	logger.debug("Roles of calling user:");
 			var memberroles = bot.servers[Servertocheck].members[userID].roles;
 		//	logger.debug(memberroles);	
 				var AllRoles = bot.servers[Servertocheck].roles;
@@ -109,13 +91,57 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						IDstoprotect.push(AllRoles[Role].id);
 					}
 				}
-				userisprotected = false //we assume ass protected users are allowed to ban for now - needs improvement.
+				userisprotected = false //we assume as protected users are allowed to ban for now - needs improvement.
 				for (var role in memberroles) {
 				if  (IDstoprotect.includes(memberroles[role])){
 					userisprotected = true
-				}
+			}
 	}		
-			if (userisprotected) {
+	
+	
+	if (copypastespamprotectionenabled) {
+		for (var knownspam in knownscamcopypastecontents) {
+			logger.silly("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
+			if (message.includes(knownspam)) {
+				if (!userisprotected){
+					//no mercy for spammers - byebye <3 
+					usertoban = {
+					serverID : Servertocheck,
+					userID : userID
+					}
+						logger.silly("Banning because of known spam");
+			//	bot.ban(usertoban);
+			}
+			}
+			
+		}
+	}
+	
+	//check if this is a command
+	if (message.substring(0, 1) == commandprefix) {
+		logger.silly("entered command region - cmd recognised!");
+		var args = message.substring(1).split(' ');
+        var cmd = args[0];
+		logger.silly("command:  " + cmd);
+	//Mostly a Debuging function to test stuff - also helpfull for the planned known copy paste scam feature (catching libra and co scammers)
+		
+	//The simple version of Notify (if we dont want to use the unprivilidged user ban notify instead)
+	//    if (message === "!Scammer") {
+	//        bot.sendMessage({
+	//            to: channelID,
+	//            message: "@Moderators"
+	//        });
+	//    }
+
+	//Additional sinity checks needed: 
+		//has the banning user has rights to ban? 
+		//is the user already banned? 
+		
+	//Ban users via Tag or ID if they already left the server 
+		if (cmd === commandnametoban) {
+		
+			
+			
 				// if (message.author.hasPermission("ADMINISTRATOR")) return logger.debug('Calling USER HAS ADMINISTRATOR PERMISSIONS!')
 			//if (message.author.hasPermission("ban")) return logger.debug('Calling USER HAS ban  PERMISSIONS!')
 			
@@ -126,24 +152,27 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			var tagsexist = false;
 			usertoban = "";
 			
-			//if (!banReason) bot.sendMessage('I need a reason to ban them! We ain\'t here false banning people!');
-			
 			//See if there was a Tag
 			if (args[1].substring(0, 3) == '<@!') {
 				logger.silly("we got a tag so ID has other chars in it  -  sanitize");
-				 usertoban = args[1].substring(3, args[1].length -1)	
+				usertoban = args[1].substring(3, args[1].length -1);
 				logger.silly('User =  ' + usertoban);
 				tagsexist = true;
 			 } else  {
 				 logger.info("No Tags exist for bancommand, ban by ID: " + args[1]);
 		  }
+		  
 		  //no user tagged, assume banning by ID 
 		if (tagsexist == false) {
 					usertoban = args[1]
 		}
-	//  if (usertoban === message.author.name) bot.sendMessage('You can\'t ban yourself, silly.');
-	//	if (!message.guild.member(usertoban).bannable) bot.sendMessage('I can\'t ban, silly.');
+		
+		if (userisprotected) {
+		if (usertoban == userID){
+			logger.info("User cant ban himself");
+		}else{
 		   try {  
+		   logger.info("Bannning user via Ban command");
 		   var usertobanid = {
 					serverID : Servertocheck,
 					userID : usertoban
@@ -193,9 +222,17 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					}
 				});
 				logger.error("couldn't ban User: " + usertoban );
-			 }	
+			 }
+			}
+
+			
 			}else {
-				var missingrightsmessage = 'Thanks for trying to help' + user + ', however you don\'t have the rights to use this command Sorry.'
+				var missingrightsmessage = 'Thanks for trying to help ' + user + ', however you don\'t have the rights to use this command Sorry.'
+				if (tagagrouponmissingrights) {
+					missingrightsmessage +=  "\nWe notified " + missingrightsnotifytags + " to take a look when possible."
+				} else {
+					missingrightsmessage +=  "\nWe noted down the ID for admins to take a look at!";
+				}
 				bot.sendMessage({
 						to: channelID,
 						embed: {
@@ -203,31 +240,28 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						  title: "Missing Rights!",
 						  description: missingrightsmessage,
 						   fields: [{
-								name: "Report User ID's",
-								value: "To ensure we can ban Scammers and Impersonators please give us their ID if possible."
+								name: "Reported User ID:",
+								value: "When Admins look at this, please check the following ID: " + usertoban
 							  },
 							  {
-								name: "How to get User ID's",
-								value: "You can check how to do that in this [Discord Support Topic](https://support.discord.com/hc/en-us/articles/206346498-Where-can-I-find-my-User-Server-Message-ID-)."
+								name: "Syntax:",
+								value: "!ban @usernametag reason for the ban \n!ban 412331231244123413 reason for the ban"
 							  }
-							}
 							],
 						  thumbnail: {
 							  url: ""
 						  },
 						  footer: {
-							text: "Thanks alot for helping us in the fight against spammers and scammers!",
+							text: "Thanks alot " + user + " for helping us in the fight against spammers and scammers!",
 						},
 					}
 					});
 				if (tagagrouponmissingrights) {
 					//missingrightsmessage += '\n Could you please take a look ' + missingrightsnotifytags
-					
 					bot.sendMessage({
 						to: channelID,
-						message: "Have a look please: " + missingrightsnotifytags
+						message: "Have a look at <@" + args[1] + "> please: " + missingrightsnotifytags
 					});
-				
 				}	
 			
 			  }
