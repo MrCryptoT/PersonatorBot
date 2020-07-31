@@ -27,6 +27,7 @@ var tagagrouponmissingrights = true;
 var knownscamcopypastecontents = ["Libra just released"] //implement this later for the usual "hey libra released" spam
 var copypastespamprotectionenabled = true;
 
+
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
@@ -252,7 +253,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 							  url: ""
 						  },
 						  footer: {
-							text: "Thanks alot " + user + " for helping us in the fight against spammers and scammers!",
+							text: "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️",
 						},
 					}
 					});
@@ -260,7 +261,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					//missingrightsmessage += '\n Could you please take a look ' + missingrightsnotifytags
 					bot.sendMessage({
 						to: channelID,
-						message: "Have a look at <@" + args[1] + "> please: " + missingrightsnotifytags
+						message: "Have a look at this please, reported ID is in the Info-Card: " + missingrightsnotifytags
 					});
 				}	
 			
