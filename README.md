@@ -6,7 +6,7 @@ Tested on windows, tho should run on any OS that supports node.js.<br>
 This Bot has  2 main goals: 
 1) Prevent impersonation of members of chosen Roles (f.E moderators/trusted traders groups)
 2) Allow manual Ban for usertags or UserIDs via command ( accessible to those protected roles . (even if that user was never on the server the user gets banned) 
-2.1) If above command is used by a non protected member it serves as a notify function (printing out the ID to potentially ban and tagging a Role if config allows it :slight_smile: )
+2.1) If above command is used by a non protected member it serves as a notify function (printing out the ID to potentially ban and tagging a Role if config allows it)
 
 ## Install Dependencies: 
 ### Windows
