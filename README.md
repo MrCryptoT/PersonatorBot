@@ -7,7 +7,7 @@
 
 This Bot has  2 main goals: 
 1) Prevent impersonation of members of chosen Roles (f.E moderators/trusted traders groups)
-2) Allow manual Ban for usertags or UserIDs via command ( accessible to those protected roles . (even if that user was never on the server the user gets banned) <br>
+2) Allow manual Ban for usertags or UserIDs via command <br>( accessible to those protected roles . even if that user was never on the server the user gets banned) <br>
 2.1) If above command is used by a non protected member it serves as a notify function (printing out the ID to potentially ban and tagging a Role if config allows it) <br>
 ![unauthd](https://github.com/MrCryptoT/PersonatorBot/blob/master/img/cmd_ban_unauthed_user.png)
 
