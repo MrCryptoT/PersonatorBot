@@ -12,18 +12,27 @@
 
 
 //Config Area
+//	Basic Setup
 var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles to protect
 var Servertocheck = "ServerID" //Server ID to protect
 var missingrightsnotifytags = "<@&455177482581180428>"; //GroupID to Tag if a user with missing rights calls a ban - if enabled make sure thebot is allowed to use the entered tag
+//use <@id> to tag a User instead of a Role for missingrightsnotifytags
+
+//	Elaborate Setup
 var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //disallow the same name even if discriminator is not the same - if true MrT#1234 and MrT#4321 can both be on the Server even if 1 of them is protected
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
 var tagagrouponmissingrights = true;
 var Loglevel = "info" //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
+
+//	Command area	
 var commandprefix = "!"; //Mostly for debugging as scanning takes places when users join or rename
 var commandnametotriggerscan = "banhammer"; //Mostly for debugging as scanning takes places when users join or renamevar commandnametotriggerscan = "!banhammer"; //Mostly for debugging as scanning takes places when users join or rename
 var commandnametoban = "ban" //banning via userid (calling user still needs proper rights)
-//<@id> to tag a User instead of a Role
+
+var helpargument = ["help", "info"]
+
+//	copy paste protection area
 var knownscamcopypastecontents = ["Libra just released"] //implement this later for the usual "hey libra released" spam
 var copypastespamprotectionenabled = true;
 
@@ -31,7 +40,6 @@ var copypastespamprotectionenabled = true;
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
-var punishaction = "kick" //or "ban" or "warn"
 
 //Init Vars for use later
 var Memberstoprotect = []
@@ -105,10 +113,10 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	}
 	Memberstoprotect = [];
 	logger.debug("add users to memberstoprotect");
-	for (var user in bot.servers[Servertocheck].members) {
-		for (var Userrole in bot.servers[Servertocheck].members[user]) {
-			if (IDstoprotect.includes(bot.servers[Servertocheck].members[user][Userrole])) {
-				Memberstoprotect.push(user);
+	for (var userobj in bot.servers[Servertocheck].members) {
+		for (var Userrole in bot.servers[Servertocheck].members[userobj]) {
+			if (IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole])) {
+				Memberstoprotect.push(userobj);
 			}
 		}
 		
@@ -265,25 +273,28 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			
 		}else {
 		//Either user has no rights to call this command, or there was an Invalid Argument used 
-			
 			var missingrightsmessage
 			var missingrightstitle
 			//Check for errorconditions and set texts
 			if (suppliedvalidarg && targeteduserisnotprotected) {
-				missingrightsmessage = 'Thanks for trying to help ' + user + ', \nHowever you don\'t have the rights to use this command Sorry.'
+				missingrightsmessage = 'Thanks for trying to help ' + user + ', \nhowever you don\'t have the rights to use this command Sorry.'
 				missingrightstitle = "Missing Rights!"
 			}else if (targeteduserisnotprotected == false) {
 				missingrightsmessage = 'No banning protected users with this Bot, sorry =)'
 				missingrightstitle = "Can't ban Admin User!"
-			} else {
-                missingrightsmessage = 'Thanks for trying to help ' + user + ', \nHowever you entered an invalid UserID.\nSee Usage below:'
+			}else if (helpargument.includes(args[1]) == true) {
+				missingrightsmessage = 'Have a look at the Syntax below:'
+				missingrightstitle = "Need help?"
+			}
+			else {
+                missingrightsmessage = 'Thanks for trying to help ' + user + ', \nhowever you entered an invalid UserID.\nSee Usage below:'
 				missingrightstitle = "Invalid Syntax!"
 			}
 			
 			//If user has missing rights but Arg was correct change msg accordingly
 			if (tagagrouponmissingrights && suppliedvalidarg && targeteduserisnotprotected) {
 				missingrightsmessage +=  "\nWe notified " + missingrightsnotifytags + " to take a look when possible."
-			} else if (suppliedvalidarg){
+			} else if (suppliedvalidarg && targeteduserisnotprotected){
 				missingrightsmessage +=  "\nWe noted down the ID for admins to take a look at!";
 			}
 			
@@ -300,7 +311,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				   fields: [
 					  {
 						name: "Usage:",
-						value: "!ban @usernametag reason for the ban \n!ban 412331231244123413 reason for the ban"
+						value: commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban +" 412331231244123413 reason for the ban"
 					  }
 					],
 				  thumbnail: {
@@ -325,7 +336,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						  },
 						  {
 							name: "Usage:",
-							value: "!ban @usernametag reason for the ban \n!ban 412331231244123413 reason for the ban"
+							value: commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban +" 412331231244123413 reason for the ban"
 						  }
 						],
 					  thumbnail: {
