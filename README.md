@@ -26,5 +26,5 @@ This Bot has  2 main goals:
 
 
 ## Screenshots: 
-```!ban help```
+```!ban help``` <br>
 ![help](https://github.com/MrCryptoT/PersonatorBot/blob/master/img/cmd_help_Output.png)
