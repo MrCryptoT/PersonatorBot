@@ -125,15 +125,17 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	if (copypastespamprotectionenabled) {
 		for (var knownspam in knownscamcopypastecontents) {
 			logger.silly("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
-			if (message.includes(knownspam)) {
+			logger.debug("spam included in this message: " + message.includes(knownscamcopypastecontents[knownspam]));
+			logger.debug("user is protected: " + userisprotected);
+			if (message.includes(knownscamcopypastecontents[knownspam])) {
 				if (!userisprotected){
 					//no mercy for spammers - byebye <3 
 					usertoban = {
 					serverID : Servertocheck,
 					userID : userID
 					}
-						logger.silly("Banning because of known spam");
-			//	bot.ban(usertoban);
+					logger.debug("Banning" + user + " (" + userID + ") because of known spam");
+				bot.ban(usertoban);
 			}
 			}
 			
@@ -234,7 +236,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 							  url: ""
 							},
 						  footer: {
-							text: "Reported by: " +user + " Thank you alot!",
+							text: "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️",
 							},
 						}
 							});	
@@ -277,8 +279,11 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			var missingrightstitle
 			//Check for errorconditions and set texts
 			if (suppliedvalidarg && targeteduserisnotprotected) {
-				missingrightsmessage = 'Thanks for trying to help ' + user + ', \nhowever you don\'t have the rights to use this command Sorry.'
+				missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you don\'t have the rights to use this command Sorry.'
 				missingrightstitle = "Missing Rights!"
+			}else if (userID == usertoban) {
+				missingrightsmessage = 'Banning yourself is a bit Silly isn\'t it?'
+				missingrightstitle = "That won't work!"
 			}else if (targeteduserisnotprotected == false) {
 				missingrightsmessage = 'No banning protected users with this Bot, sorry =)'
 				missingrightstitle = "Can't ban Admin User!"
@@ -287,14 +292,14 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				missingrightstitle = "Need help?"
 			}
 			else {
-                missingrightsmessage = 'Thanks for trying to help ' + user + ', \nhowever you entered an invalid UserID.\nSee Usage below:'
+                missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you entered an invalid UserID.\nSee Usage below:'
 				missingrightstitle = "Invalid Syntax!"
 			}
 			
 			//If user has missing rights but Arg was correct change msg accordingly
 			if (tagagrouponmissingrights && suppliedvalidarg && targeteduserisnotprotected) {
 				missingrightsmessage +=  "\nWe notified " + missingrightsnotifytags + " to take a look when possible."
-			} else if (suppliedvalidarg && targeteduserisnotprotected){
+			} else if (suppliedvalidarg && targeteduserisnotprotected && (userID != usertoban)){
 				missingrightsmessage +=  "\nWe noted down the ID for admins to take a look at!";
 			}
 			
@@ -311,7 +316,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				   fields: [
 					  {
 						name: "Usage:",
-						value: commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban +" 412331231244123413 reason for the ban"
+						value: "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
 					  }
 					],
 				  thumbnail: {
@@ -336,7 +341,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						  },
 						  {
 							name: "Usage:",
-							value: commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban +" 412331231244123413 reason for the ban"
+							value: "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
 						  }
 						],
 					  thumbnail: {
@@ -351,7 +356,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				if (tagagrouponmissingrights && suppliedvalidarg) {
 					bot.sendMessage({
 						to: channelID,
-						message: missingrightsnotifytags + " Have a look at this please, the reported ID is in the Info-Card:" 
+						message: missingrightsnotifytags + " Have a look at this please, the reported ID is in the Info-Card" 
 						});
 				}	
 			}
