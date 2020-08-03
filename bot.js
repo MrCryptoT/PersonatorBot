@@ -36,6 +36,9 @@ var helpargument = ["help", "info"]
 var knownscamcopypastecontents = ["Libra just released"] //implement this later for the usual "hey libra released" spam
 var copypastespamprotectionenabled = true;
 
+
+			
+			
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
@@ -69,6 +72,12 @@ bot.on('ready', function (evt) {
     runcheck();
 });
 
+//Event to fire if bots Disconencts (experimental fix for stopping bot after certain amount of hours)
+bot.on('disconnect', (msg, code) => {
+    if (code === 0) return console.error(msg);
+    bot.connect();
+});
+
 //Event fire's on new users joining the "guild" (guild = Discord Server - damn discord's programmers are Gaming oriented)
 bot.on('guildMemberAdd', function (member) {
 	logger.info(member + 'joined!');
@@ -88,8 +97,8 @@ bot.on('guildMemberUpdate', function (oldMember, newMember) {
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
-	//run a check now to build all needed Arrays
-	
+	//set Footertext for embeds (thank u msg)
+	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️"
 	//Now do message specific stuff
 	logger.debug("Roles of calling user:");
 	//Grab Roles of messaging user
@@ -236,7 +245,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 							  url: ""
 							},
 						  footer: {
-							text: "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️",
+							text: Footertext,
 							},
 						}
 							});	
@@ -277,6 +286,8 @@ bot.on('message', function(user, userID, channelID, message, event) {
 		//Either user has no rights to call this command, or there was an Invalid Argument used 
 			var missingrightsmessage
 			var missingrightstitle
+			var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
+			
 			//Check for errorconditions and set texts
 			if (suppliedvalidarg && targeteduserisnotprotected) {
 				missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you don\'t have the rights to use this command Sorry.'
@@ -284,6 +295,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			}else if (userID == usertoban) {
 				missingrightsmessage = 'Banning yourself is a bit Silly isn\'t it?'
 				missingrightstitle = "That won't work!"
+				usagestring = "`" + commandprefix + commandnametoban + " @NOTyourself reason for the ban" + "`"
 			}else if (targeteduserisnotprotected == false) {
 				missingrightsmessage = 'No banning protected users with this Bot, sorry =)'
 				missingrightstitle = "Can't ban Admin User!"
@@ -316,14 +328,14 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				   fields: [
 					  {
 						name: "Usage:",
-						value: "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
+						value: usagestring
 					  }
 					],
 				  thumbnail: {
 					  url: ""
 					},
 				  footer: {
-					text: "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️",
+					text: Footertext,
 					},
 				}
 				});
@@ -341,14 +353,14 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						  },
 						  {
 							name: "Usage:",
-							value: "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
+							value: usagestring
 						  }
 						],
 					  thumbnail: {
 						  url: ""
 						},
 					  footer: {
-						text: "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️",
+						text: Footertext,
 						},
 					}
 				});
@@ -383,7 +395,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					  url: ""
 				  },
 				  footer: {
-					  text: "Reported by: " +user + " Thank you alot!",
+					  text: Footertext,
 					},
 				}
 			});
