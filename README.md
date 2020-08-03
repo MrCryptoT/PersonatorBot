@@ -21,8 +21,20 @@ This Bot has  2 main goals:
 ```npm install Woor/discord.io#gateway_v6```<br>
 
 ## Configuration
+
 1) Supply your Auth token in auth.json
-2) Replace the Varaibles in the bot.js and supply ServerID to protect users on
+```RolestoCheck``` Supply the name of Roles to protect
+```Servertocheck``` The ID of the Server to protect
+```missingrightsnotifytags``` The ID of the Role to notify if a nonprivilidged user call ```!ban```
+```knownscamcopypastecontents``` Strings that are known Spam - *be careful with those*, they should be long and make sure to exclude false positives! 
+```copypastespamprotectionenabled``` Make sure to disable if you don't want to ban users with certain Strings in their messages
+```includediscriminator``` Decide if you want to include the #1234 numbers in the Namecheck. (false will ban users with the same name, but different discriminator) 
+```tagagrouponmissingrights``` Make sure to disable if you don't want to notify a Role if a nonprivilidged User calls ```!ban```
+
+There are more variables to play around with, but above covers the important stuff
+
+2) Invite the Bot to your Server via OAuth generated for your Bot. (Sorry this bot isn't running for multiple servers - it's supposed to be configured for each Server and run by some Admin of said Server) 
+
 
 ## Run the Bot
 ```node bot.js```
@@ -31,3 +43,4 @@ This Bot has  2 main goals:
 ## Screenshots: 
 ```!ban help``` <br>
 ![help](https://github.com/MrCryptoT/PersonatorBot/blob/master/img/cmd_help_Output.png)
+
