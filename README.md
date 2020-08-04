@@ -22,14 +22,14 @@ This Bot has  2 main goals:
 
 ## Configuration
 
-1) Supply your Auth token in auth.json
-```RolestoCheck``` Supply the name of Roles to protect
-```Servertocheck``` The ID of the Server to protect
-```missingrightsnotifytags``` The ID of the Role to notify if a nonprivilidged user call ```!ban```
-```knownscamcopypastecontents``` Strings that are known Spam - *be careful with those*, they should be long and make sure to exclude false positives! 
-```copypastespamprotectionenabled``` Make sure to disable if you don't want to ban users with certain Strings in their messages
-```includediscriminator``` Decide if you want to include the #1234 numbers in the Namecheck. (false will ban users with the same name, but different discriminator) 
-```tagagrouponmissingrights``` Make sure to disable if you don't want to notify a Role if a nonprivilidged User calls ```!ban```
+1) Supply your Auth token in auth.json<br>
+```RolestoCheck``` Supply the name of Roles to protect<br>
+```Servertocheck``` The ID of the Server to protect<br>
+```missingrightsnotifytags``` The ID of the Role to notify if a nonprivilidged user call ```!ban```<br>
+```knownscamcopypastecontents``` Strings that are known Spam - *be careful with those*, they should be long and make sure to exclude false positives! <br>
+```copypastespamprotectionenabled``` Make sure to disable if you don't want to ban users with certain Strings in their messages<br>
+```includediscriminator``` Decide if you want to include the #1234 numbers in the Namecheck. (false will ban users with the same name, but different discriminator) <br>
+```tagagrouponmissingrights``` Make sure to disable if you don't want to notify a Role if a nonprivilidged User calls ```!ban```<br>
 
 There are more variables to play around with, but above covers the important stuff
 
