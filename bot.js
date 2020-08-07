@@ -38,7 +38,8 @@ var copypastespamprotectionenabled = true;
 
 
 			
-			
+
+
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
@@ -90,7 +91,7 @@ bot.on('guildMemberAdd', function (member) {
 
 //Event fires on a name Change of a User already in our Guild
 bot.on('guildMemberUpdate', function (oldMember, newMember) {
-	logger.info(oldMember.username + 'renamed to: ' + newMember.username);
+	logger.info('renamed to: ' + newMember.username);
 	//Run a Check whenever a user changes his name
 	runcheck();
 });
@@ -102,6 +103,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	//Now do message specific stuff
 	logger.debug("Roles of calling user:");
 	//Grab Roles of messaging user
+	logger.debug("current user ID: " + userID + " in server: " + Servertocheck);
 	var memberroles = bot.servers[Servertocheck].members[userID].roles;
 	logger.debug(memberroles);	
 	//Grab all Serverroles
@@ -144,7 +146,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					userID : userID
 					}
 					logger.debug("Banning" + user + " (" + userID + ") because of known spam");
-				bot.ban(usertoban);
+				//bot.ban(usertoban);
 			}
 			}
 			
@@ -233,7 +235,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						serverID : Servertocheck,
 						userID : usertoban
 						}
-					bot.ban(usertobanid);
+					//bot.ban(usertobanid);
 					logger.silly("trying to ban userid : " + usertoban);
 					bot.sendMessage({
 						to: channelID,
@@ -455,7 +457,7 @@ function runcheck(){
 		Membersnamestoprotect += bot.users[user].username;	
 		}
 	}
-
+	logger.debug("All protected Users:");
 	for (var property in Memberstoprotect) {
     if( Memberstoprotect.hasOwnProperty( property ) ) {
        logger.debug(property + ": " + Memberstoprotect[property]);
@@ -466,12 +468,12 @@ function runcheck(){
 	var partialmatchfound = false;
 	for (var user in AllUsers) {
 		var usernameplain = bot.users[user].username;
-		logger.debug("checking username: " + usernameplain);
-		logger.silly( "Length of username :" + (usernameplain).length);
+	//	logger.debug("checking username: " + usernameplain);
+	//	logger.silly( "Length of username :" + (usernameplain).length);
 	//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
 		//check if minimal length is satisfied - if not bail
 		if (usernameplain.length > minnamelengthtoprotect){
-		logger.debug("Member is protected: " + Memberstoprotect.includes(user));
+	//	logger.debug("Member is protected: " + Memberstoprotect.includes(user));
 		//Check if user is a protected member by userid - if so bail
 		if (Memberstoprotect.includes(user) == false) {
 			//Check if username matches (exactly) with protected User
@@ -495,7 +497,7 @@ function runcheck(){
 							serverID : Servertocheck,
 							userID : bot.users[user].id
 							}
-							bot.ban(usertoban);
+							//bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 						}else {
 							//assume kick
@@ -522,7 +524,7 @@ function runcheck(){
 								serverID : Servertocheck,
 								userID : bot.users[user].id
 								}
-								bot.ban(usertoban);
+								//bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 							} catch (e) {
 								 logger.debug(e)
