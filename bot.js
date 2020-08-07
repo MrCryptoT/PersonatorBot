@@ -37,9 +37,6 @@ var knownscamcopypastecontents = ["Libra just released"] //implement this later 
 var copypastespamprotectionenabled = true;
 
 
-			
-
-
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
@@ -50,15 +47,15 @@ var Memberstoprotect = []
 var Membersnamestoprotect = []
 var Memberstoban = []
 var MembersIDtoban = []
-
+ 
 // Init logger settings
 logger.remove(logger.transports.Console);
 logger.add(new logger.transports.Console, {
 	colorize: true
 });
-
 logger.info('Started Logger - starting Bot');
 logger.level = Loglevel;
+
 // Initialize Discord Bot
 var bot = new Discord.Client({
 	token: auth.token,
@@ -69,11 +66,16 @@ bot.on('ready', function (evt) {
 	logger.info('Connected, Bot ready');
     logger.debug('Logged in as: ');
     logger.debug(bot.username + ' - (' + bot.id + ')');
-	//run a check directly on startup in case the bot was down a while
-    runcheck();
+	bot.getAllUsers();
+	var input = {
+		limit: 99999,
+	}
+	bot.getMembers(input);
+    setTimeout(() => runcheck(), 10000);
+
 });
 
-//Event to fire if bots Disconencts (experimental fix for stopping bot after certain amount of hours)
+//Event to fire if bots Disconencts (fix for stopping bot after certain amount of hours)
 bot.on('disconnect', (msg, code) => {
     if (code === 0) return console.error(msg);
     bot.connect();
@@ -102,8 +104,17 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️"
 	//Now do message specific stuff
 	logger.debug("Roles of calling user:");
+
+	//FIX for "role not defined" for recently joined user which was quicker than the Cache of our Lib
+	// IF my understanding is correct, this will retrieve all data regarding users
+		
+	var author = {
+	serverID: Servertocheck,
+	userID: userID,
+	}
+	member = bot.getMember(author);
+	
 	//Grab Roles of messaging user
-	logger.debug("current user ID: " + userID + " in server: " + Servertocheck);
 	var memberroles = bot.servers[Servertocheck].members[userID].roles;
 	logger.debug(memberroles);	
 	//Grab all Serverroles
@@ -123,30 +134,30 @@ bot.on('message', function(user, userID, channelID, message, event) {
 		}
 	}
 	Memberstoprotect = [];
-	logger.debug("add users to memberstoprotect");
 	for (var userobj in bot.servers[Servertocheck].members) {
 		for (var Userrole in bot.servers[Servertocheck].members[userobj]) {
+			//logger.debug("add users to memberstoprotect: " + IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole]));
 			if (IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole])) {
 				Memberstoprotect.push(userobj);
 			}
 		}
-		
 	}	
 	
 	if (copypastespamprotectionenabled) {
 		for (var knownspam in knownscamcopypastecontents) {
-			logger.silly("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
-			logger.debug("spam included in this message: " + message.includes(knownscamcopypastecontents[knownspam]));
-			logger.debug("user is protected: " + userisprotected);
+			
+			logger.silly("spam included in this message: " + message.includes(knownscamcopypastecontents[knownspam]));
+			logger.silly("user is protected: " + userisprotected);
 			if (message.includes(knownscamcopypastecontents[knownspam])) {
+				logger.info("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
 				if (!userisprotected){
 					//no mercy for spammers - byebye <3 
 					usertoban = {
 					serverID : Servertocheck,
 					userID : userID
 					}
-					logger.debug("Banning" + user + " (" + userID + ") because of known spam");
-				//bot.ban(usertoban);
+					logger.warn("Banning" + user + " (" + userID + ") because of known spam");
+					bot.ban(usertoban);
 			}
 			}
 			
@@ -176,11 +187,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	//Ban users via Tag or ID if they already left the server 
 		if (cmd === commandnametoban) {
 		
-			
-			
-				// if (message.author.hasPermission("ADMINISTRATOR")) return logger.debug('Calling USER HAS ADMINISTRATOR PERMISSIONS!')
-			//if (message.author.hasPermission("ban")) return logger.debug('Calling USER HAS ban  PERMISSIONS!')
-			
 			const banReason = args.slice(2);
 			logger.silly("entered " + commandnametoban + " command region - cmd recognised!");
 			logger.silly('Arg1 ' + args[1]);
@@ -207,9 +213,8 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				usertoban = args[1]
 				suppliedvalidarg = true;
 			}
-		logger.debug("arg 1 length: " + args[1].length)
-		logger.debug("suppliedvalidarg = " + suppliedvalidarg)
-					
+		logger.silly("arg 1 length: " + args[1].length)
+		logger.silly("suppliedvalidarg = " + suppliedvalidarg)			
 		}
 		//Make sure we dont make cehcks on invlaid arguments if no users are supplied
 		var targeteduserisnotprotected = true;
@@ -219,11 +224,9 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			if (Memberstoprotect.includes(usertoban)){
 				targeteduserisnotprotected = false
 				logger.debug("usertoban" + usertoban)
-		
 			}
 		}
 		logger.debug("targeteduserisnotprotected" + targeteduserisnotprotected)
-		
 		
 		if (userisprotected && suppliedvalidarg && targeteduserisnotprotected) {
 			if (usertoban == userID){
@@ -235,7 +238,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						serverID : Servertocheck,
 						userID : usertoban
 						}
-					//bot.ban(usertobanid);
+					bot.ban(usertobanid);
 					logger.silly("trying to ban userid : " + usertoban);
 					bot.sendMessage({
 						to: channelID,
@@ -251,18 +254,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 							},
 						}
 							});	
-					// const modlogChannelID = '454523192661245953'
-					//	if (modlogChannelID.length !== 0) {
-					//		if (client.channels.get(modlogChannelID )) return undefined;
-					//		const banComfirmationEmbedModLog = 
-					//		client.channels.get(modlogChannelID).send({
-					//			embed: {
-					//		Author: '**${msg.author.username} Swinged the ban hammer on **' + usertoban.name,
-					//		color: 0x442691,
-					//		description: '**__A Ban has occoured!__**\n' + '**__Moderator__**: ${user.username}\n' + '**__Rule Breaker__**: ${user.discriminator}\n' + '**__Reason__**: ${reason}\n'
-					//			}
-					//		});
-					//	}	
 				} 
 				catch (error) {
 					bot.sendMessage({
@@ -300,7 +291,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				usagestring = "`" + commandprefix + commandnametoban + " @NOTyourself reason for the ban" + "`"
 			}else if (targeteduserisnotprotected == false) {
 				missingrightsmessage = 'No banning protected users with this Bot, sorry =)'
-				missingrightstitle = "Can't ban Admin User!"
+				missingrightstitle = "Can't ban protected User!"
 			}else if (helpargument.includes(args[1]) == true) {
 				missingrightsmessage = 'Have a look at the Syntax below:'
 				missingrightstitle = "Need help?"
@@ -406,19 +397,45 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	
 });
 
+function wait(ms){
+   var start = new Date().getTime();
+   var end = start;
+   while(end < start + ms) {
+     end = new Date().getTime();
+  }
+}
+
 //Function to actualy build current user Array's and check for same username's
 function runcheck(){
-	//Grab all servers the Bot is on
-    var Servers = bot.servers;
-	logger.silly(Servers);	
+	logger.silly("Servers : " + bot.servers);	
 	//Grab all Users we know of on the Server to protect
+	
+	//var AllUsers = bot.getAllUsers();
+	
+	
+	bot.getAllUsers();
+	//Force Cache to update by grabbing all users explicitly
+	var input = {
+		serverID : Servertocheck,
+		userID : usertoban
+	}
+	bot.getMembers(input);
+	
 	var AllUsers = bot.servers[Servertocheck].members;
-	logger.debug("Users:")
+	
+
+	//var AllUsers = bot.getAllUsers();
+	logger.silly("Users:")
+	var usercount = 0;
 	for (var property in AllUsers) {
 		if( AllUsers.hasOwnProperty( property ) ) {
-		   logger.debug(property + ": " + AllUsers[property])
+		   logger.silly(property + ": " + AllUsers[property])
+		   usercount += 1;
 		}
 	}
+
+	logger.verbose("User count: " + usercount);
+	logger.verbose("Total Membercount: " + bot.servers[Servertocheck].member_count);
 	//Grab all Roles on the Server
 	var AllRoles = bot.servers[Servertocheck].roles;
 	logger.debug("Roles:");
@@ -435,9 +452,9 @@ function runcheck(){
 			IDstoprotect.push(AllRoles[Role].id);
 		}
 	}
-	logger.debug("IDs to protect");
+	logger.verbose("Detected Role IDs to protect");
 	for (var id in IDstoprotect){
-		logger.debug(IDstoprotect[id])
+		logger.verbose(IDstoprotect[id])
 	}
 	
 	logger.debug("add users to memberstoprotect");
@@ -449,8 +466,8 @@ function runcheck(){
 		}
 		
 	}
-	logger.debug("Members to protect:");
-	logger.silly(Memberstoprotect.length);
+	logger.verbose("Members to protect:");
+	logger.debug(Memberstoprotect.length);
 
 	for (var user in bot.users) {
 		if (Memberstoprotect.includes(bot.users[user].id)) {
@@ -460,7 +477,7 @@ function runcheck(){
 	logger.debug("All protected Users:");
 	for (var property in Memberstoprotect) {
     if( Memberstoprotect.hasOwnProperty( property ) ) {
-       logger.debug(property + ": " + Memberstoprotect[property]);
+       logger.verbose(property + ": " + Memberstoprotect[property]);
 		}
 	}
 	Memberstoban = [];
@@ -468,12 +485,12 @@ function runcheck(){
 	var partialmatchfound = false;
 	for (var user in AllUsers) {
 		var usernameplain = bot.users[user].username;
-	//	logger.debug("checking username: " + usernameplain);
-	//	logger.silly( "Length of username :" + (usernameplain).length);
+		logger.debug("checking username: " + usernameplain);
+		logger.silly( "Length of username :" + (usernameplain).length);
 	//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
 		//check if minimal length is satisfied - if not bail
 		if (usernameplain.length > minnamelengthtoprotect){
-	//	logger.debug("Member is protected: " + Memberstoprotect.includes(user));
+		logger.debug("Member is protected: " + Memberstoprotect.includes(user));
 		//Check if user is a protected member by userid - if so bail
 		if (Memberstoprotect.includes(user) == false) {
 			//Check if username matches (exactly) with protected User
@@ -497,7 +514,7 @@ function runcheck(){
 							serverID : Servertocheck,
 							userID : bot.users[user].id
 							}
-							//bot.ban(usertoban);
+							bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 						}else {
 							//assume kick
@@ -524,7 +541,7 @@ function runcheck(){
 								serverID : Servertocheck,
 								userID : bot.users[user].id
 								}
-								//bot.ban(usertoban);
+								bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 							} catch (e) {
 								 logger.debug(e)
@@ -539,8 +556,8 @@ function runcheck(){
 								userID : bot.users[user].id
 								}
 								bot.kick(usertokick);
-								logger.debug("Boolean value of kick command:");
-							logger.debug(bot.kick(Servertocheck, bot.users[user].id));
+								logger.silly("Boolean value of kick command:");
+							logger.silly(bot.kick(Servertocheck, bot.users[user].id));
 							tmpstring += " kicked:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 						}
 					}
@@ -549,5 +566,6 @@ function runcheck(){
 		}
 	}
 	//return our message to interactively display it in case a user triggered a scan (otherwise stay silent)
+	logger.debug(" ");
 	return tmpstring
 }
