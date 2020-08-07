@@ -14,29 +14,29 @@
 //Config Area
 //	Basic Setup
 var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles to protect
-var Servertocheck = "ServerID" //Server ID to protect
+var Servertocheck = "ServerID"; //Server ID to protect
 var missingrightsnotifytags = "<@&455177482581180428>"; //GroupID to Tag if a user with missing rights calls a ban - if enabled make sure thebot is allowed to use the entered tag
 //use <@id> to tag a User instead of a Role for missingrightsnotifytags
-var ChannelIDtorespondin = ["740588315501133943"] //ignore commands in all other channels - leave EMPTY [] to allow all channels!
+var ChannelIDtorespondin = ["740588315501133943"]; //ignore commands in all other channels - leave EMPTY [] to allow all channels!
 var staysilentonwrongchannelusedforcommand = false; //if set to true Bot will completely ignore commands in non bot channels (supply all channel ID's the bot is allowed to talk in in it's var)
-var wrongchanneldescriptionforcommand = "Please use the #scam-alert Channel next time to report scammers, We'll take a look when we can."	
+var wrongchanneldescriptionforcommand = "Please use the #scam-alert Channel next time to report scammers, We'll take a look when we can.";	
 
 //	Elaborate Setup
 var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //disallow the same name even if discriminator is not the same - if true MrT#1234 and MrT#4321 can both be on the Server even if 1 of them is protected
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
 var tagagrouponmissingrights = true;
-var Loglevel = "info" //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
+var Loglevel = "info"; //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
 
 //	Command area	
 var commandprefix = "!"; //Mostly for debugging as scanning takes places when users join or rename
 var commandnametotriggerscan = "banhammer"; //Mostly for debugging as scanning takes places when users join or renamevar commandnametotriggerscan = "!banhammer"; //Mostly for debugging as scanning takes places when users join or rename
-var commandnametoban = "ban" //banning via userid (calling user still needs proper rights)
+var commandnametoban = "ban"; //banning via userid (calling user still needs proper rights)
 
-var helpargument = ["help", "info"]
+var helpargument = ["help", "info"];
 
 //	copy paste protection area
-var knownscamcopypastecontents = ["Libra just released"] //implement this later for the usual "hey libra released" spam
+var knownscamcopypastecontents = ["Libra just released"]; //implement this later for the usual "hey libra released" spam
 var copypastespamprotectionenabled = true;
 
 //req's
@@ -45,10 +45,10 @@ var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
 
 //Init Vars for use later
-var Memberstoprotect = []
-var Membersnamestoprotect = []
-var Memberstoban = []
-var MembersIDtoban = []
+var Memberstoprotect = [];
+var Membersnamestoprotect = [];
+var Memberstoban = [];
+var MembersIDtoban = [];
  
 // Init logger settings
 logger.remove(logger.transports.Console);
