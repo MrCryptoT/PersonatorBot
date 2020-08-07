@@ -387,7 +387,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			}else{
 				//we are not in a Bot Channel, maybe inform 
 				if (staysilentonwrongchannelusedforcommand){
-				debug.info("stayig silent cuz non bot channel");
+				logger.info("stayig silent cuz non bot channel");
 				}else{
 					
 						bot.sendMessage({
