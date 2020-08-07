@@ -141,24 +141,24 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			logger.debug("user is protected: " + userisprotected);
 			if (message.includes(knownscamcopypastecontents[knownspam])) {
 				if (!userisprotected){
-					if (punishaction == "ban"){	
-					
 					//no mercy for spammers - byebye <3 
 					usertoban = {
-					serverID : Servertocheck,
-					userID : userID
+						serverID : Servertocheck,
+						userID : userID
 					}
-					logger.debug("Banning" + user + " (" + userID + ") because of known spam");
-				bot.ban(usertoban);
-				}else{
-				bot.kick(usertoban);	
+					if (punishaction == "ban"){	
+						logger.debug("Banning " + user + " (" + userID + ") because of known spam");
+						bot.ban(usertoban);
+					}else{
+						logger.debug("Kicking " + user + " (" + userID + ") because of known spam");
+						bot.kick(usertoban);	
 				}
 				
 			}
-			}
-			
 		}
+			
 	}
+}
 	
 	//check if this is a command
 	if (message.substring(0, 1) == commandprefix && (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0)) {
