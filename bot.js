@@ -17,6 +17,9 @@ var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles 
 var Servertocheck = "ServerID" //Server ID to protect
 var missingrightsnotifytags = "<@&455177482581180428>"; //GroupID to Tag if a user with missing rights calls a ban - if enabled make sure thebot is allowed to use the entered tag
 //use <@id> to tag a User instead of a Role for missingrightsnotifytags
+var ChannelIDtorespondin = ["740588315501133943"] //ignore commands in all other channels - leave EMPTY [] to allow all channels!
+var staysilentonwrongchannelusedforcommand = false; //if set to true Bot will completely ignore commands in non bot channels (supply all channel ID's the bot is allowed to talk in in it's var)
+var wrongchanneldescriptionforcommand = "Please use the #scam-alert Channel next time to report scammers, We'll take a look when we can."	
 
 //	Elaborate Setup
 var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
@@ -37,7 +40,6 @@ var knownscamcopypastecontents = ["Libra just released"] //implement this later 
 var copypastespamprotectionenabled = true;
 
 
-			
 			
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
@@ -97,6 +99,7 @@ bot.on('guildMemberUpdate', function (oldMember, newMember) {
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
+	
 	//set Footertext for embeds (thank u msg)
 	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️"
 	//Now do message specific stuff
@@ -138,6 +141,8 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			logger.debug("user is protected: " + userisprotected);
 			if (message.includes(knownscamcopypastecontents[knownspam])) {
 				if (!userisprotected){
+					if (punishaction == "ban"){	
+					
 					//no mercy for spammers - byebye <3 
 					usertoban = {
 					serverID : Servertocheck,
@@ -145,6 +150,10 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					}
 					logger.debug("Banning" + user + " (" + userID + ") because of known spam");
 				bot.ban(usertoban);
+				}else{
+				bot.kick(usertoban);	
+				}
+				
 			}
 			}
 			
@@ -152,7 +161,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	}
 	
 	//check if this is a command
-	if (message.substring(0, 1) == commandprefix) {
+	if (message.substring(0, 1) == commandprefix && (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0)) {
 		logger.silly("entered command region - cmd recognised!");
 		var args = message.substring(1).split(' ');
         var cmd = args[0];
@@ -223,7 +232,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 		logger.debug("targeteduserisnotprotected" + targeteduserisnotprotected)
 		
 		
-		if (userisprotected && suppliedvalidarg && targeteduserisnotprotected) {
+		if (userisprotected && suppliedvalidarg && targeteduserisnotprotected  ) {
 			if (usertoban == userID){
 				logger.info("User cant ban himself");
 			}else{
@@ -235,6 +244,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						}
 					bot.ban(usertobanid);
 					logger.silly("trying to ban userid : " + usertoban);
+				
 					bot.sendMessage({
 						to: channelID,
 						embed: {
@@ -248,7 +258,8 @@ bot.on('message', function(user, userID, channelID, message, event) {
 							text: Footertext,
 							},
 						}
-							});	
+					});	
+					
 					// const modlogChannelID = '454523192661245953'
 					//	if (modlogChannelID.length !== 0) {
 					//		if (client.channels.get(modlogChannelID )) return undefined;
@@ -302,8 +313,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			}else if (helpargument.includes(args[1]) == true) {
 				missingrightsmessage = 'Have a look at the Syntax below:'
 				missingrightstitle = "Need help?"
-			}
-			else {
+			}else {
                 missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you entered an invalid UserID.\nSee Usage below:'
 				missingrightstitle = "Invalid Syntax!"
 			}
@@ -316,41 +326,17 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			}
 			
 			//Send differing embeds depending on data 
-			
-			//no need for "Reported user ID" section if it was invalid or a reported ID was a protected user
-			if (suppliedvalidarg == false || targeteduserisnotprotected == false){
-				bot.sendMessage({
-				to: channelID,
-				embed: {
-				  color: 0x442691,
-				  title: missingrightstitle,
-				  description: missingrightsmessage,
-				   fields: [
-					  {
-						name: "Usage:",
-						value: usagestring
-					  }
-					],
-				  thumbnail: {
-					  url: ""
-					},
-				  footer: {
-					text: Footertext,
-					},
-				}
-				});
-			} else {
-			
-				bot.sendMessage({
+			//Let's see if we are in a Bot channel, we may want to inform if we are not to use another channel
+			if (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0 ){
+				//no need for "Reported user ID" section if it was invalid or a reported ID was a protected user
+				if (suppliedvalidarg == false || targeteduserisnotprotected == false){
+					bot.sendMessage({
 					to: channelID,
 					embed: {
 					  color: 0x442691,
 					  title: missingrightstitle,
 					  description: missingrightsmessage,
-					   fields: [{
-							name: "Reported User ID:",
-							value: "When Admins look at this, please check the following ID: " + usertoban
-						  },
+					   fields: [
 						  {
 							name: "Usage:",
 							value: usagestring
@@ -363,15 +349,75 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						text: Footertext,
 						},
 					}
-				});
+					});
+				} else {
 				
-				if (tagagrouponmissingrights && suppliedvalidarg) {
 					bot.sendMessage({
 						to: channelID,
-						message: missingrightsnotifytags + " Have a look at this please, the reported ID is in the Info-Card" 
-						});
-				}	
+						embed: {
+						  color: 0x442691,
+						  title: missingrightstitle,
+						  description: missingrightsmessage,
+						   fields: [{
+								name: "Reported User ID:",
+								value: "When Admins look at this, please check the following ID: " + usertoban
+							  },
+							  {
+								name: "Usage:",
+								value: usagestring
+							  }
+							],
+						  thumbnail: {
+							  url: ""
+							},
+						  footer: {
+							text: Footertext,
+							},
+						}
+					});
+					
+					if (tagagrouponmissingrights && suppliedvalidarg) {
+						bot.sendMessage({
+							to: channelID,
+							message: missingrightsnotifytags + " Have a look at this please, the reported ID is in the Info-Card" 
+							});
+					}	
+				}
+				
+			}else{
+				//we are not in a Bot Channel, maybe inform 
+				if (staysilentonwrongchannelusedforcommand){
+				debug.info("stayig silent cuz non bot channel");
+				}else{
+					
+						bot.sendMessage({
+						to: channelID,
+						embed: {
+						  color: 0x442691,
+						  title: "Wrong Channel",
+						  description: wrongchanneldescriptionforcommand,
+						   fields: [{
+								name: "Reported User ID:",
+								value: "When Admins look at this, please check the following ID: " + usertoban
+							  },
+							  {
+								name: "Usage:",
+								value: usagestring
+							  }
+							],
+						  thumbnail: {
+							  url: ""
+							},
+						  footer: {
+							text: Footertext,
+							},
+						}
+					});
+				}
 			}
+			
+			
+			
 		}
 	}
 
