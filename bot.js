@@ -26,9 +26,8 @@ var banacceptedreaction = ["✅"];
 var deleteafterreaction = false;
 var Reportemoji = "🚨";
 var Reportonemojireaction = true;
-
 //	Elaborate Setup
-var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
+var minnamelengthtoprotect = 1; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //disallow the same name even if discriminator is not the same - if true MrT#1234 and MrT#4321 can both be on the Server even if 1 of them is protected
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
 var tagagrouponmissingrights = true;
@@ -79,7 +78,7 @@ bot.on('ready', function (evt) {
 		limit: 99999,
 	}
 	bot.getMembers(input);
-    setTimeout(() => runcheck(), 1000);
+    setTimeout(() => runcheck(), 1500);
 
 });
 
@@ -107,9 +106,20 @@ bot.on('guildMemberUpdate', function (oldMember, newMember) {
 //Event fires on a reaction to some Message
 bot.on('messageReactionAdd', function (messageReaction, user, event) {
 
-
+	//Grab Roles of messaging user
+	var memberroles = bot.servers[Servertocheck].members[messageReaction.d.user_id].roles;
+	logger.debug(memberroles);	
+	//Grab all Serverroles
+	var AllRoles = bot.servers[Servertocheck].roles;
+	//Grab ID's of Mentioned Roles to protect
+	var IDstoprotect = [];
+	for (var Role in AllRoles) {
+		if (RolestoCheck.includes(AllRoles[Role].name)) {
+			IDstoprotect.push(AllRoles[Role].id);
+		}
+	}
 	//Check if reacting user is a memeber of a protected Role
-	userisprotected = isuserprotected(messageReaction.d.user_id)
+		userisprotected = isuserprotected(messageReaction.d.user_id)
 	var reactingmessageid = messageReaction.d.message_id;
 	var reactinguserid = messageReaction.d.user_id;
 	var emoji = messageReaction.d.emoji
@@ -176,20 +186,7 @@ logger.debug("is user protected : " + isuserprotected(userID))
 	//we are not in a Bot Channel, maybe inform if choosen to do so and if it's a command for us 
 	if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforcommand == false && (!ChannelIDtorespondin.includes(channelID))){
 		logger.debug("Informing User about wrong channel for Bot Interaction");
-			bot.sendMessage({
-			to: channelID,
-			embed: {
-			  color: 14177041,
-			   title: "Wrong Channel",
-			   description: wrongchanneldescriptionforcommand,
-			  thumbnail: {
-				  url: ""
-			  },
-			  footer: {
-				text: Footertext,
-				},
-			}
-		});
+			sendembed_basic(channelID, 14177041, "Wrong Channel", wrongchanneldescriptionforcommand, Footertext);
 	}
 	
 	//check if this is a command and if we are in bot channel
@@ -252,7 +249,7 @@ logger.debug("is user protected : " + isuserprotected(userID))
 			}
 		}
 		logger.debug("targeteduserisnotprotected" + targeteduserisnotprotected)
-		if (isuserprotected(usertoban) && suppliedvalidarg && targeteduserisnotprotected) {
+		if (isuserprotected(userID) && suppliedvalidarg && targeteduserisnotprotected) {
 			if (usertoban == userID){
 				logger.info("User cant ban himself");
 			}else{
@@ -263,37 +260,11 @@ logger.debug("is user protected : " + isuserprotected(userID))
 						userID : usertoban
 						}
 					bot.ban(usertobanid);
-					logger.silly("trying to ban userid : " + usertoban);
-					bot.sendMessage({
-						to: channelID,
-						embed: {
-						  color: 3066993,
-						  title: "User Banned!",
-						  description: 'Alright, <@' + usertoban + '> has been banned for ' + banReason,
-						  thumbnail: {
-							  url: ""
-							},
-						  footer: {
-							text: Footertext,
-							},
-						}
-					});	
+					logger.info("trying to ban userid : " + usertoban);
+					sendembed_basic(channelID, 3066993, "User Banned!", 'Alright, <@' + usertoban + '> has been banned for ' + banReason, Footertext);
 				} 
 				catch (error) {
-					bot.sendMessage({
-						to: channelID,
-						embed: {
-						  color: 0x442691,
-						  title: "Couldn't Ban",
-						  description: 'couldn\'t ban User Sorry! Make sure you supply a correct ID or Tag. \n Also we cannot ban a user twice ;)',
-						  thumbnail: {
-							  url: ""
-						  },
-						  footer: {
-							text: "If there is a Scammer feel free to let someone know anyways!",
-							},
-						}
-					});
+					sendembed_basic(channelID, 0x442691, "Couldn't Ban", 'couldn\'t ban User Sorry! Make sure you supply a correct ID or Tag. \n Also we cannot ban a user twice ;)',  Footertext);
 					logger.error("couldn't ban User: " + usertoban );
 				}
 			}
@@ -367,14 +338,6 @@ logger.debug("is user protected : " + isuserprotected(userID))
 	
 });
 
-function wait(ms){
-   var start = new Date().getTime();
-   var end = start;
-   while(end < start + ms) {
-     end = new Date().getTime();
-  }
-}
-
 function sendembed_basic(channelID, color, titlestr, description, Footertext){
 	 bot.sendMessage({ to:channelID,
 			   embed: {
@@ -439,14 +402,25 @@ function sendembed_report(channelID, color, titlestr, description, Footertext, u
 	}
 }
 function isuserprotected(userid){
-	
+	bot.getAllUsers();
+	var input = {
+		limit: 99999,
+	}
+	bot.getMembers(input);
+
 	var author = {
 	serverID: Servertocheck,
 	userID: userid,
 	}
-	member = bot.getMember(author);
-	
+	var member;
+	 setTimeout(() =>  member = bot.getMember(author), 1500);
+	//member = bot.getMember(author);
+	   
 	//Grab Roles of messaging user
+	if (typeof bot.servers[Servertocheck].members[userid] == 'undefined'){
+		//Member is not a member of the server anymore, so can't be protected user
+		return false;
+	}
 	var memberroles = bot.servers[Servertocheck].members[userid].roles;
 	//logger.debug(memberroles);	
 	//Grab all Serverroles
@@ -465,7 +439,7 @@ function isuserprotected(userid){
 		userisprotected = true
 		}
 	}
-	logger.debug("Checking if " + userid + " is protected: " + userisprotected);
+	
 	if (userisprotected){
 		return true;
 	}else{
@@ -475,7 +449,7 @@ function isuserprotected(userid){
 
 //Function to actualy build current user Array's and check for same username's
 function runcheck(){
-	logger.silly("Servers : " + bot.servers);	
+		logger.silly("Servers : " + bot.servers);	
 	//Grab all Users we know of on the Server to protect
 	
 	//var AllUsers = bot.getAllUsers();
@@ -484,7 +458,7 @@ function runcheck(){
 	bot.getAllUsers();
 	//Force Cache to update by grabbing all users explicitly
 	var input = {
-		serverID : Servertocheck
+		limit: 99999,
 	}
 	bot.getMembers(input);
 	
@@ -527,8 +501,8 @@ function runcheck(){
 	var partialmatchfound = false;
 	for (var user in AllUsers) {
 		var usernameplain = bot.users[user].username;
-		logger.debug("checking username: " + usernameplain);
-		logger.silly( "Length of username :" + (usernameplain).length);
+		logger.debug("checking username: " + usernameplain + " -  " +  " : is similar to protected name? " + Membersnamestoprotect.includes(usernameplain));
+		logger.silly( "Length of username :" + (usernameplain).length); 
 		//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
 		//check if minimal length is satisfied - if not bail
 		if (usernameplain.length > minnamelengthtoprotect){
@@ -536,7 +510,15 @@ function runcheck(){
 		//Check if user is a protected member by userid - if so bail
 		if (isuserprotected(user) == false) {
 			//Check if username matches (exactly) with protected User
-			if (Membersnamestoprotect.includes(usernameplain)) {
+			var Usernameisprotectedadwasimpersonated = false;
+			var arraycontinasusername = (Membersnamestoprotect.indexOf(usernameplain) > -1);
+			if (arraycontinasusername){
+				if (Membersnamestoprotect[Membersnamestoprotect.indexOf(usernameplain)] == usernameplain){
+					Usernameisprotectedadwasimpersonated = true;
+				}
+			}
+			
+			if (Usernameisprotectedadwasimpersonated) {
 				//Check how harsh the checking is - may ignore the discriminator (#numbers) 
 				if (includediscriminator) {
 					//remember we got a partial match, even if we don't want to ban/kick those users - we may want to warn some users.
@@ -608,6 +590,6 @@ function runcheck(){
 		}
 	}
 	//return our message to interactively display it in case a user triggered a scan (otherwise stay silent)
-	logger.debug(" ");
+	logger.debug(" end of  dataset");
 	return tmpstring
 }
