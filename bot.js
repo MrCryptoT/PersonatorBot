@@ -24,6 +24,9 @@ var punishaction = "ban" // "kick" or "ban"
 var mee6inteagration_cmdclear_enabled = false;
 var banacceptedreaction = ["✅"];
 var deleteafterreaction = false;
+var Reportemoji = "🚨";
+var Reportonemojireaction = true;
+
 //	Elaborate Setup
 var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //disallow the same name even if discriminator is not the same - if true MrT#1234 and MrT#4321 can both be on the Server even if 1 of them is protected
@@ -88,9 +91,7 @@ bot.on('disconnect', (msg, code) => {
 
 //Event fire's on new users joining the "guild" (guild = Discord Server - damn discord's programmers are Gaming oriented)
 bot.on('guildMemberAdd', function (member) {
-	logger.info(member + 'joined!');
-	logger.info(member.id + 'ID!');
-	logger.info(member.username + 'name!');
+	logger.info(member.id + 'ID joined!');
 	logger.info(member.discriminator + 'name!');
 	//Run a Check whenever a new user joins
 	runcheck();
@@ -98,19 +99,14 @@ bot.on('guildMemberAdd', function (member) {
 
 //Event fires on a name Change of a User already in our Guild
 bot.on('guildMemberUpdate', function (oldMember, newMember) {
-	logger.info('renamed to: ' + newMember.username);
+	logger.info('User renamed to: ' + newMember.username);
 	//Run a Check whenever a user changes his name
 	runcheck();
 });
 
 //Event fires on a reaction to some Message
 bot.on('messageReactionAdd', function (messageReaction, user, event) {
-	var author = {
-	serverID: Servertocheck,
-	userID: messageReaction.d.user_id,
-	}
-	member = bot.getMember(author);
-	
+
 	//Grab Roles of messaging user
 	var memberroles = bot.servers[Servertocheck].members[messageReaction.d.user_id].roles;
 	logger.debug(memberroles);	
@@ -123,61 +119,29 @@ bot.on('messageReactionAdd', function (messageReaction, user, event) {
 			IDstoprotect.push(AllRoles[Role].id);
 		}
 	}
-	//Check if messaging user is a memeber of a protected Role
-	userisprotected = false //we assume as protected users are allowed to ban for now - needs improvement.
-	for (var role in memberroles) {
-	if  (IDstoprotect.includes(memberroles[role])){
-		userisprotected = true
+	//Check if reacting user is a memeber of a protected Role
+		userisprotected = isuserprotected(messageReaction.d.user_id)
+	var reactingmessageid = messageReaction.d.message_id;
+	var reactinguserid = messageReaction.d.user_id;
+	var emoji = messageReaction.d.emoji
+	var reactedinchannelid = messageReaction.d.channel_id
+	logger.debug("reacting user is protected: " + isuserprotected(reactinguserid));
+	logger.debug(messageReaction);
+	if (emoji.name == Reportemoji){
+		logger.debug("Reportemoji detected");
+		if (Reportonemojireaction){
+			
 		}
 	}
-	Memberstoprotect = [];
-	for (var userobj in bot.servers[Servertocheck].members) {
-		for (var Userrole in bot.servers[Servertocheck].members[userobj]) {
-			//logger.debug("add users to memberstoprotect: " + IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole]));
-			if (IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole])) {
-				Memberstoprotect.push(userobj);
-			}
+	logger.debug("reactedinchannelid : " + reactingmessageid + " due to Reaction: " + emoji.name );
+	if (banacceptedreaction.includes(emoji.name) && deleteafterreaction && isuserprotected(reactinguserid)){
+		logger.info("Removing our message due to reaction of protected user: " + reactingmessageid);
+		var delparams = {
+			 channelID: reactedinchannelid,
+			 messageID: reactingmessageid
 		}
-	}	
-	
-	//bot.reaction.
-var reactingmessageid = messageReaction.d.message_id;
-var reactinguserid = messageReaction.d.user_id;
-var emoji = messageReaction.d.emoji
-var reactedinchannelid = messageReaction.d.channel_id
-logger.debug("reacting user: " + reactinguserid);
-logger.debug("msg id : " + reactingmessageid);
-logger.debug("Emoji name: " + emoji.name);
-logger.debug("Emoji id: " + emoji.id);
-logger.debug("reacting user is protected: " + Memberstoprotect.includes(reactinguserid));
-var msgparams = {
-	channelID: reactedinchannelid, 
-	messageID: reactingmessageid
-}
-var origmsg = bot.getMessage(msgparams);
-
-logger.debug(messageReaction);
-logger.debug("original message: " + origmsg);
-logger.debug("reactedinchannelid : " + reactingmessageid + " due to Reaction: " + emoji.name );
-logger.verbose("Members to protect:");
-logger.debug(Memberstoprotect.length);
-	for (var user in bot.users) {
-		if (Memberstoprotect.includes(reactinguserid)) {
-		Membersnamestoprotect += bot.users[user].username;	
-		}
+		bot.deleteMessage(delparams);
 	}
-if (banacceptedreaction.includes(emoji.name) && deleteafterreaction && Memberstoprotect.includes(reactinguserid)){
-	logger.info("Removing our message due to reaction of protected user: " + reactingmessageid);
-	
-	var delparams = {
-		 channelID: reactedinchannelid,
-         messageID: reactingmessageid
-	}
-	bot.deleteMessage(delparams);
-    // in here we could anwser to the user  - this will most likely be the ban command tho so we are fine.
-	
-	//Furthermore, grab all message with "!ban" && "reporteduserid" and delete them? 
-}
 });
 
 //Event that fires on new messages in the Server (Command)
@@ -185,46 +149,11 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	//set Footertext for embeds (thank u msg)
 	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️"
 	//Now do message specific stuff
-	logger.debug("Roles of calling user:");
+	//logger.debug("Roles of calling user:");
 
-	//FIX for "role not defined" for recently joined user which was quicker than the Cache of our Lib
-	// IF my understanding is correct, this will retrieve all data regarding users
-		
-	var author = {
-	serverID: Servertocheck,
-	userID: userID,
-	}
-	member = bot.getMember(author);
-	
-	//Grab Roles of messaging user
-	var memberroles = bot.servers[Servertocheck].members[userID].roles;
-	logger.debug(memberroles);	
-	//Grab all Serverroles
-	var AllRoles = bot.servers[Servertocheck].roles;
-	//Grab ID's of Mentioned Roles to protect
-	var IDstoprotect = [];
-	for (var Role in AllRoles) {
-		if (RolestoCheck.includes(AllRoles[Role].name)) {
-			IDstoprotect.push(AllRoles[Role].id);
-		}
-	}
 	//Check if messaging user is a memeber of a protected Role
-	userisprotected = false //we assume as protected users are allowed to ban for now - needs improvement.
-	for (var role in memberroles) {
-	if  (IDstoprotect.includes(memberroles[role])){
-		userisprotected = true
-		}
-	}
-	Memberstoprotect = [];
-	for (var userobj in bot.servers[Servertocheck].members) {
-		for (var Userrole in bot.servers[Servertocheck].members[userobj]) {
-			//logger.debug("add users to memberstoprotect: " + IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole]));
-			if (IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole])) {
-				Memberstoprotect.push(userobj);
-			}
-		}
-	}	
-	
+	userisprotected = isuserprotected(userID) //we assume as protected users are allowed to ban for now - needs improvement.
+logger.debug("is user protected : " + isuserprotected(userID))
 	if (copypastespamprotectionenabled) {
 		for (var knownspam in knownscamcopypastecontents) {
 			logger.silly("spam included in this message: " + message.includes(knownscamcopypastecontents[knownspam]));
@@ -233,26 +162,12 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				logger.info("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
 				if (!userisprotected){
 					//Fix Spambot behaviour and delete message before banning (this ensures the message get wiped even if user leaves) 
-					var getmsgs = {
-						channelID : channelID,
-					}
-					var messages = bot.getMessages(getmsgs)
-					for (var property in messages) {
-						if( messages.hasOwnProperty( property ) ) {
-						   logger.debug(property + ": " + messages[property]);
-						}
-					}
-					logger.silly("event.d.id " + event.d.id);
 					var deleteparams = {
 						channelID : channelID,
 						messageID : event.d.id
 					}
-					logger.debug("ID 1 " + deleteparams.messageID + " in channel " + deleteparams.channelID);
-					
-					//logger.debug("MessageID: " + bot.servers[Servertocheck].channels[channelID].last_message_id)
 					logger.debug("deleting message " + deleteparams.messageID + " from User: (" + userID + ") because of known spam");
 					bot.deleteMessage(deleteparams);
-				
 					//no mercy for spammers - byebye <3 
 					usertoban = {
 						serverID : Servertocheck,
@@ -288,7 +203,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 		});
 	}
 	
-	
 	//check if this is a command and if we are in bot channel
 	if (message.substring(0, 1) == commandprefix && (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0)) {
 		logger.silly("entered command region - cmd recognised!");
@@ -310,7 +224,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 		
 	//Ban users via Tag or ID if they already left the server 
 		if (cmd === commandnametoban) {
-		
 			const banReason = args.slice(2);
 			logger.silly("entered " + commandnametoban + " command region - cmd recognised!");
 			logger.silly('Arg1 ' + args[1]);
@@ -329,7 +242,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			 } else  {
 				 logger.info("No Tags exist for bancommand, ban by ID: " + args[1]);
 		  }
-		  
 		//no user tagged, assume banning by ID 
 		if (tagsexist == false) {
 			//check if ID was valid ID judging by length
@@ -345,14 +257,13 @@ bot.on('message', function(user, userID, channelID, message, event) {
 		logger.debug("supplied valid arg" + suppliedvalidarg)
 		if (suppliedvalidarg) {
 		//Check if user to ban is a protected User
-			if (Memberstoprotect.includes(usertoban)){
+			if (isuserprotected(usertoban)){
 				targeteduserisnotprotected = false
 				logger.debug("usertoban" + usertoban)
 			}
 		}
 		logger.debug("targeteduserisnotprotected" + targeteduserisnotprotected)
-		
-		if (userisprotected && suppliedvalidarg && targeteduserisnotprotected) {
+		if (isuserprotected(usertoban) && suppliedvalidarg && targeteduserisnotprotected) {
 			if (usertoban == userID){
 				logger.info("User cant ban himself");
 			}else{
@@ -364,7 +275,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						}
 					bot.ban(usertobanid);
 					logger.silly("trying to ban userid : " + usertoban);
-					
 					bot.sendMessage({
 						to: channelID,
 						embed: {
@@ -379,8 +289,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 							},
 						}
 					});	
-				
-					
 				} 
 				catch (error) {
 					bot.sendMessage({
@@ -400,7 +308,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					logger.error("couldn't ban User: " + usertoban );
 				}
 			}
-			
 		}else {
 		//Either user has no rights to call this command, or there was an Invalid Argument used 
 			var missingrightsmessage
@@ -409,7 +316,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			if (mee6inteagration_cmdclear_enabled == true){
 				 usagestring += "\nIf I didn't clean up all spam automatically Mee6 might be able to help out with \n `!clear @usernametag numberofmsgs` \n"
 			}
-			//Check for errorconditions and set texts
+			//Check for errorconditions and set texts accordingly
 			if (suppliedvalidarg && targeteduserisnotprotected) {
 				missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you don\'t have the rights to use this command Sorry.'
 				missingrightstitle = "Missing Rights!"
@@ -437,58 +344,14 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			} else if (suppliedvalidarg && targeteduserisnotprotected && (userID != usertoban)){
 				missingrightsmessage +=  "\nWe noted down the ID for admins to take a look at!";
 			}
-			
 			//Send differing embeds depending on data 
 			//Let's see if we are in a Bot channel, we may want to inform if we are not to use another channel
 			if (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0 ){
 				//no need for "Reported user ID" section if it was invalid or a reported ID was a protected user
 				if (suppliedvalidarg == false || targeteduserisnotprotected == false){
-					bot.sendMessage({
-					to: channelID,
-					embed: {
-					  color: 14177041,
-					  title: missingrightstitle,
-					  description: missingrightsmessage,
-					   fields: [
-						  {
-							name: "Usage:",
-							value: usagestring
-						  }
-						],
-					  thumbnail: {
-						  url: ""
-						},
-					  footer: {
-						text: Footertext,
-						},
-					}
-					});
+					sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, "NONE", usagestring);
 				} else {
-				
-					bot.sendMessage({
-						to: channelID,
-						embed: {
-						  color: 0x442691,
-						  title: missingrightstitle,
-						  description: missingrightsmessage,
-						   fields: [{
-								name: "Reported User ID:",
-								value: "When Admins look at this, please check the following ID: " + usertoban
-							  },
-							  {
-								name: "Usage:",
-								value: usagestring
-							  }
-							],
-						  thumbnail: {
-							  url: ""
-							},
-						  footer: {
-							text: Footertext,
-							},
-						}
-					});
-					
+					sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, usertoban, usagestring);
 					if (tagagrouponmissingrights && suppliedvalidarg) {
 						bot.sendMessage({
 							to: channelID,
@@ -496,14 +359,9 @@ bot.on('message', function(user, userID, channelID, message, event) {
 							});
 					}	
 				}
-				
 			}
 		}
-		
-		
-		
 	}
-
 		if (cmd === commandnametotriggerscan) {
 			Bannedusers = runcheck();
 			logger.debug(Bannedusers)
@@ -514,20 +372,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				msgback = Bannedusers
 				titlestr = "Banned - Thx 4 the help!"
 			}
-			
-		    bot.sendMessage({ to:channelID,
-			   embed: {
-				  color: 0x442691,
-				  title: titlestr,
-				  description: msgback,
-				  thumbnail: {
-					  url: ""
-				  },
-				  footer: {
-					  text: Footertext,
-					},
-				}
-			});
+			sendembed_basic(channelID, 0x442691, titlestr, msgback, Footertext);
 		}
 	}
 	
@@ -541,7 +386,103 @@ function wait(ms){
   }
 }
 
-
+function sendembed_basic(channelID, color, titlestr, description, Footertext){
+	 bot.sendMessage({ to:channelID,
+			   embed: {
+				  color: color,
+				  title: titlestr,
+				  description: description,
+				  thumbnail: {
+					  url: ""
+				  },
+				  footer: {
+					  text: Footertext,
+					},
+				}
+			});
+}
+function sendembed_report(channelID, color, titlestr, description, Footertext, usertoban, usagestring){
+		if (usertoban == "NONE"){
+			bot.sendMessage({
+				to: channelID,
+				embed: {
+				  color: color,
+				  title: titlestr,
+				  description: description,
+				   fields: [
+					  {
+						name: "Usage:",
+						value: usagestring
+					  }
+					],
+				  thumbnail: {
+					  url: ""
+					},
+				  footer: {
+					text: Footertext,
+					},
+				}
+				});
+		}else{
+			bot.sendMessage({
+				to: channelID,
+				embed: {
+				  color: color,
+				  title: titlestr,
+				  description: description,
+				   fields: [{
+						name: "Reported User ID:",
+						value: "When Admins look at this, please check the following ID: " + usertoban
+					  },
+					  {
+						name: "Usage:",
+						value: usagestring
+					  }
+					],
+				  thumbnail: {
+					  url: ""
+					},
+				  footer: {
+					text: Footertext,
+					},
+				}
+			});
+	}
+}
+function isuserprotected(userid){
+	
+	var author = {
+	serverID: Servertocheck,
+	userID: userid,
+	}
+	member = bot.getMember(author);
+	
+	//Grab Roles of messaging user
+	var memberroles = bot.servers[Servertocheck].members[userid].roles;
+	//logger.debug(memberroles);	
+	//Grab all Serverroles
+	var AllRoles = bot.servers[Servertocheck].roles;
+	//Grab ID's of Mentioned Roles to protect
+	var IDstoprotect = [];
+	for (var Role in AllRoles) {
+		if (RolestoCheck.includes(AllRoles[Role].name)) {
+			IDstoprotect.push(AllRoles[Role].id);
+		}
+	}
+	//Check if messaging user is a memeber of a protected Role
+	var userisprotected = false //we assume as protected users are allowed to ban for now - needs improvement.
+	for (var role in memberroles) {
+	if  (IDstoprotect.includes(memberroles[role])){
+		userisprotected = true
+		}
+	}
+	logger.debug("Checking if " + userid + " is protected: " + userisprotected);
+	if (userisprotected){
+		return true;
+	}else{
+		return false;
+	}
+}
 
 //Function to actualy build current user Array's and check for same username's
 function runcheck(){
@@ -554,8 +495,7 @@ function runcheck(){
 	bot.getAllUsers();
 	//Force Cache to update by grabbing all users explicitly
 	var input = {
-		serverID : Servertocheck,
-		userID : usertoban
+		serverID : Servertocheck
 	}
 	bot.getMembers(input);
 	
@@ -571,44 +511,19 @@ function runcheck(){
 		   usercount += 1;
 		}
 	}
-
 	logger.verbose("User count: " + usercount);
 	logger.verbose("Total Membercount: " + bot.servers[Servertocheck].member_count);
 	//Grab all Roles on the Server
-	var AllRoles = bot.servers[Servertocheck].roles;
-	logger.debug("Roles:");
-	for (var property in AllRoles) {
-		if( AllRoles.hasOwnProperty( property ) ) {
-        logger.debug(property + ": " + AllRoles[property])
-		}
-	}
-    //reset "to protect" Arrays and refill
-	var IDstoprotect = [];
-	var Memberstoprotect = [];
-	for (var Role in AllRoles) {
-		if (RolestoCheck.includes(AllRoles[Role].name)) {
-			IDstoprotect.push(AllRoles[Role].id);
-		}
-	}
-	logger.verbose("Detected Role IDs to protect");
-	for (var id in IDstoprotect){
-		logger.verbose(IDstoprotect[id])
-	}
 	
 	logger.debug("add users to memberstoprotect");
 	for (var user in AllUsers) {
-		for (var Userrole in AllUsers[user]) {
-			if (IDstoprotect.includes(AllUsers[user][Userrole])) {
-				Memberstoprotect.push(user);
-			}
+		if (isuserprotected(user)){
+		Memberstoprotect.push(user);
 		}
-		
 	}
-	logger.verbose("Members to protect:");
-	logger.debug(Memberstoprotect.length);
 
 	for (var user in bot.users) {
-		if (Memberstoprotect.includes(bot.users[user].id)) {
+		if (isuserprotected(bot.users[user].id)) {
 		Membersnamestoprotect += bot.users[user].username;	
 		}
 	}
@@ -628,9 +543,9 @@ function runcheck(){
 		//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
 		//check if minimal length is satisfied - if not bail
 		if (usernameplain.length > minnamelengthtoprotect){
-		logger.debug("Member is protected: " + Memberstoprotect.includes(user));
+		logger.debug("Member " + user + " is protected: " + isuserprotected(user));
 		//Check if user is a protected member by userid - if so bail
-		if (Memberstoprotect.includes(user) == false) {
+		if (isuserprotected(user) == false) {
 			//Check if username matches (exactly) with protected User
 			if (Membersnamestoprotect.includes(usernameplain)) {
 				//Check how harsh the checking is - may ignore the discriminator (#numbers) 
