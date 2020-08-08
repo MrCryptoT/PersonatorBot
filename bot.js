@@ -106,18 +106,7 @@ bot.on('guildMemberUpdate', function (oldMember, newMember) {
 //Event fires on a reaction to some Message
 bot.on('messageReactionAdd', function (messageReaction, user, event) {
 
-	//Grab Roles of messaging user
-	var memberroles = bot.servers[Servertocheck].members[messageReaction.d.user_id].roles;
-	logger.debug(memberroles);	
-	//Grab all Serverroles
-	var AllRoles = bot.servers[Servertocheck].roles;
-	//Grab ID's of Mentioned Roles to protect
-	var IDstoprotect = [];
-	for (var Role in AllRoles) {
-		if (RolestoCheck.includes(AllRoles[Role].name)) {
-			IDstoprotect.push(AllRoles[Role].id);
-		}
-	}
+
 	//Check if reacting user is a memeber of a protected Role
 		userisprotected = isuserprotected(messageReaction.d.user_id)
 	var reactingmessageid = messageReaction.d.message_id;
