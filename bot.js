@@ -182,7 +182,6 @@ if (banacceptedreaction.includes(emoji.name) && deleteafterreaction && Membersto
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
-	if (message.member.hasPermission("ADMINISTRATOR")) return console.log('THIS USER HAS ADMINISTRATOR PERMISSIONS!')
 	//set Footertext for embeds (thank u msg)
 	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️"
 	//Now do message specific stuff
