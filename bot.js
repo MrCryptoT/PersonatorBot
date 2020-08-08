@@ -14,19 +14,22 @@
 //Config Area
 //	Basic Setup
 var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles to protect
-var Servertocheck = "ServerID"; //Server ID to protect
+var Servertocheck = "454523192657051668"; //Server ID to protect
 var missingrightsnotifytags = "<@&455177482581180428>"; //GroupID to Tag if a user with missing rights calls a ban - if enabled make sure thebot is allowed to use the entered tag
 //use <@id> to tag a User instead of a Role for missingrightsnotifytags
 var ChannelIDtorespondin = ["740588315501133943"]; //ignore commands in all other channels - leave EMPTY [] to allow all channels!
-var staysilentonwrongchannelusedforcommand = false; //if set to true Bot will completely ignore commands in non bot channels (supply all channel ID's the bot is allowed to talk in in it's var)
+var staysilentonwrongchannelusedforcommand = true; //if set to true Bot will completely ignore commands in non bot channels (supply all channel ID's the bot is allowed to talk in in it's var)
 var wrongchanneldescriptionforcommand = "Please use the #scam-alert Channel next time to report scammers, We'll take a look when we can.";	
-
+var punishaction = "ban" // "kick" or "ban" 
+var mee6inteagration_cmdclear_enabled = false;
+var banacceptedreaction = ["✅"];
+var deleteafterreaction = false;
 //	Elaborate Setup
 var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //disallow the same name even if discriminator is not the same - if true MrT#1234 and MrT#4321 can both be on the Server even if 1 of them is protected
 var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
 var tagagrouponmissingrights = true;
-var Loglevel = "info"; //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
+var Loglevel = "debug"; //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
 
 //	Command area	
 var commandprefix = "!"; //Mostly for debugging as scanning takes places when users join or rename
@@ -36,7 +39,7 @@ var commandnametoban = "ban"; //banning via userid (calling user still needs pro
 var helpargument = ["help", "info"];
 
 //	copy paste protection area
-var knownscamcopypastecontents = ["Libra just released"]; //implement this later for the usual "hey libra released" spam
+var knownscamcopypastecontents = ["Facebooks Libra coin just got released! Heres the Tweet", "indicator from tradest.io"]; //implement this later for the usual "hey libra released" spam
 var copypastespamprotectionenabled = true;
 
 //req's
@@ -73,7 +76,7 @@ bot.on('ready', function (evt) {
 		limit: 99999,
 	}
 	bot.getMembers(input);
-    setTimeout(() => runcheck(), 10000);
+    setTimeout(() => runcheck(), 1000);
 
 });
 
@@ -100,9 +103,86 @@ bot.on('guildMemberUpdate', function (oldMember, newMember) {
 	runcheck();
 });
 
+//Event fires on a reaction to some Message
+bot.on('messageReactionAdd', function (messageReaction, user, event) {
+	var author = {
+	serverID: Servertocheck,
+	userID: messageReaction.d.user_id,
+	}
+	member = bot.getMember(author);
+	
+	//Grab Roles of messaging user
+	var memberroles = bot.servers[Servertocheck].members[messageReaction.d.user_id].roles;
+	logger.debug(memberroles);	
+	//Grab all Serverroles
+	var AllRoles = bot.servers[Servertocheck].roles;
+	//Grab ID's of Mentioned Roles to protect
+	var IDstoprotect = [];
+	for (var Role in AllRoles) {
+		if (RolestoCheck.includes(AllRoles[Role].name)) {
+			IDstoprotect.push(AllRoles[Role].id);
+		}
+	}
+	//Check if messaging user is a memeber of a protected Role
+	userisprotected = false //we assume as protected users are allowed to ban for now - needs improvement.
+	for (var role in memberroles) {
+	if  (IDstoprotect.includes(memberroles[role])){
+		userisprotected = true
+		}
+	}
+	Memberstoprotect = [];
+	for (var userobj in bot.servers[Servertocheck].members) {
+		for (var Userrole in bot.servers[Servertocheck].members[userobj]) {
+			//logger.debug("add users to memberstoprotect: " + IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole]));
+			if (IDstoprotect.includes(bot.servers[Servertocheck].members[userobj][Userrole])) {
+				Memberstoprotect.push(userobj);
+			}
+		}
+	}	
+	
+	//bot.reaction.
+var reactingmessageid = messageReaction.d.message_id;
+var reactinguserid = messageReaction.d.user_id;
+var emoji = messageReaction.d.emoji
+var reactedinchannelid = messageReaction.d.channel_id
+logger.debug("reacting user: " + reactinguserid);
+logger.debug("msg id : " + reactingmessageid);
+logger.debug("Emoji name: " + emoji.name);
+logger.debug("Emoji id: " + emoji.id);
+logger.debug("reacting user is protected: " + Memberstoprotect.includes(reactinguserid));
+var msgparams = {
+	channelID: reactedinchannelid, 
+	messageID: reactingmessageid
+}
+var origmsg = bot.getMessage(msgparams);
+
+logger.debug(messageReaction);
+logger.debug("original message: " + origmsg);
+logger.debug("reactedinchannelid : " + reactingmessageid + " due to Reaction: " + emoji.name );
+logger.verbose("Members to protect:");
+logger.debug(Memberstoprotect.length);
+	for (var user in bot.users) {
+		if (Memberstoprotect.includes(reactinguserid)) {
+		Membersnamestoprotect += bot.users[user].username;	
+		}
+	}
+if (banacceptedreaction.includes(emoji.name) && deleteafterreaction && Memberstoprotect.includes(reactinguserid)){
+	logger.info("Removing our message due to reaction of protected user: " + reactingmessageid);
+	
+	var delparams = {
+		 channelID: reactedinchannelid,
+         messageID: reactingmessageid
+	}
+	bot.deleteMessage(delparams);
+    // in here we could anwser to the user  - this will most likely be the ban command tho so we are fine.
+	
+	//Furthermore, grab all message with "!ban" && "reporteduserid" and delete them? 
+}
+});
+
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
-	
+	if (message.member.hasPermission("ADMINISTRATOR")) return console.log('THIS USER HAS ADMINISTRATOR PERMISSIONS!')
 	//set Footertext for embeds (thank u msg)
 	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️"
 	//Now do message specific stuff
@@ -153,6 +233,27 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			if (message.includes(knownscamcopypastecontents[knownspam])) {
 				logger.info("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
 				if (!userisprotected){
+					//Fix Spambot behaviour and delete message before banning (this ensures the message get wiped even if user leaves) 
+					var getmsgs = {
+						channelID : channelID,
+					}
+					var messages = bot.getMessages(getmsgs)
+					for (var property in messages) {
+						if( messages.hasOwnProperty( property ) ) {
+						   logger.debug(property + ": " + messages[property]);
+						}
+					}
+					logger.silly("event.d.id " + event.d.id);
+					var deleteparams = {
+						channelID : channelID,
+						messageID : event.d.id
+					}
+					logger.debug("ID 1 " + deleteparams.messageID + " in channel " + deleteparams.channelID);
+					
+					//logger.debug("MessageID: " + bot.servers[Servertocheck].channels[channelID].last_message_id)
+					logger.debug("deleting message " + deleteparams.messageID + " from User: (" + userID + ") because of known spam");
+					bot.deleteMessage(deleteparams);
+				
 					//no mercy for spammers - byebye <3 
 					usertoban = {
 						serverID : Servertocheck,
@@ -169,8 +270,27 @@ bot.on('message', function(user, userID, channelID, message, event) {
 		}		
 	}
 }
+	//we are not in a Bot Channel, maybe inform if choosen to do so and if it's a command for us 
+	if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforcommand == false && (!ChannelIDtorespondin.includes(channelID))){
+		logger.debug("Informing User about wrong channel for Bot Interaction");
+			bot.sendMessage({
+			to: channelID,
+			embed: {
+			  color: 14177041,
+			   title: "Wrong Channel",
+			   description: wrongchanneldescriptionforcommand,
+			  thumbnail: {
+				  url: ""
+			  },
+			  footer: {
+				text: Footertext,
+				},
+			}
+		});
+	}
 	
-	//check if this is a command
+	
+	//check if this is a command and if we are in bot channel
 	if (message.substring(0, 1) == commandprefix && (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0)) {
 		logger.silly("entered command region - cmd recognised!");
 		var args = message.substring(1).split(' ');
@@ -245,13 +365,13 @@ bot.on('message', function(user, userID, channelID, message, event) {
 						}
 					bot.ban(usertobanid);
 					logger.silly("trying to ban userid : " + usertoban);
-				
+					
 					bot.sendMessage({
 						to: channelID,
 						embed: {
-						  color: 0x442691,
+						  color: 3066993,
 						  title: "User Banned!",
-						  description: 'Alright, ' + usertoban + ' has been banned for ' + banReason,
+						  description: 'Alright, <@' + usertoban + '> has been banned for ' + banReason,
 						  thumbnail: {
 							  url: ""
 							},
@@ -260,6 +380,8 @@ bot.on('message', function(user, userID, channelID, message, event) {
 							},
 						}
 					});	
+				
+					
 				} 
 				catch (error) {
 					bot.sendMessage({
@@ -279,12 +401,15 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					logger.error("couldn't ban User: " + usertoban );
 				}
 			}
+			
 		}else {
 		//Either user has no rights to call this command, or there was an Invalid Argument used 
 			var missingrightsmessage
 			var missingrightstitle
 			var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
-			
+			if (mee6inteagration_cmdclear_enabled == true){
+				 usagestring += "\nIf I didn't clean up all spam automatically Mee6 might be able to help out with \n `!clear @usernametag numberofmsgs` \n"
+			}
 			//Check for errorconditions and set texts
 			if (suppliedvalidarg && targeteduserisnotprotected) {
 				missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you don\'t have the rights to use this command Sorry.'
@@ -299,8 +424,11 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			}else if (helpargument.includes(args[1]) == true) {
 				missingrightsmessage = 'Have a look at the Syntax below:'
 				missingrightstitle = "Need help?"
+			}else if (!(args[1].length == 18)) {
+				missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you entered an invalid UserID.\nSee Usage below:'
+				missingrightstitle = "Invalid UserID!"
 			}else {
-        missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you entered an invalid UserID.\nSee Usage below:'
+				missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however I can\'t recognise this syntax Sorry'
 				missingrightstitle = "Invalid Syntax!"
 			}
 			
@@ -319,7 +447,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					bot.sendMessage({
 					to: channelID,
 					embed: {
-					  color: 0x442691,
+					  color: 14177041,
 					  title: missingrightstitle,
 					  description: missingrightsmessage,
 					   fields: [
@@ -370,41 +498,11 @@ bot.on('message', function(user, userID, channelID, message, event) {
 					}	
 				}
 				
-			}else{
-				//we are not in a Bot Channel, maybe inform 
-				if (staysilentonwrongchannelusedforcommand){
-				logger.info("stayig silent cuz non bot channel");
-				}else{
-					
-						bot.sendMessage({
-						to: channelID,
-						embed: {
-						  color: 0x442691,
-						  title: "Wrong Channel",
-						  description: wrongchanneldescriptionforcommand,
-						   fields: [{
-								name: "Reported User ID:",
-								value: "When Admins look at this, please check the following ID: " + usertoban
-							  },
-							  {
-								name: "Usage:",
-								value: usagestring
-							  }
-							],
-						  thumbnail: {
-							  url: ""
-							},
-						  footer: {
-							text: Footertext,
-							},
-						}
-					});
-				}
 			}
-			
-			
-			
 		}
+		
+		
+		
 	}
 
 		if (cmd === commandnametotriggerscan) {
@@ -443,6 +541,8 @@ function wait(ms){
      end = new Date().getTime();
   }
 }
+
+
 
 //Function to actualy build current user Array's and check for same username's
 function runcheck(){
@@ -526,7 +626,7 @@ function runcheck(){
 		var usernameplain = bot.users[user].username;
 		logger.debug("checking username: " + usernameplain);
 		logger.silly( "Length of username :" + (usernameplain).length);
-	//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
+		//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
 		//check if minimal length is satisfied - if not bail
 		if (usernameplain.length > minnamelengthtoprotect){
 		logger.debug("Member is protected: " + Memberstoprotect.includes(user));
