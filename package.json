@@ -6,6 +6,7 @@
   "author": "MrT",
   "dependencies": {
     "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
+    "tesseract.js": "^2.1.1",
     "winston": "^3.3.3"
   }
 }
