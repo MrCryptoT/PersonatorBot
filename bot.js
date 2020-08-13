@@ -154,7 +154,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 				logger.debug("Trying to OCR");
 			//Start Async workers (Spam check handled in callback/checkforspam is triggered again after recognising)	
 			;(async () => {
-				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id);
+				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID);
 			})()
 			//End of OCR Part - we triggered the worker so continue with other messageevent related code
 			}
@@ -316,7 +316,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	
 });
 
-function containsknownspam(message, userID, msgid){
+function containsknownspam(message, userID, msgid, channelID){
 	logger.debug("checking msg: " + message);
 	for (var knownspam in knownscamcopypastecontents) {
 			logger.silly("spam included in message: " + message + "  \n" + message.includes(knownscamcopypastecontents[knownspam]));
@@ -352,7 +352,7 @@ function containsknownspam(message, userID, msgid){
 }
 
 
-async function getTextFromImage(imageurl, userID, msgid) {
+async function getTextFromImage(imageurl, userID, msgid, channelID) {
 const image = imageurl;
 logger.debug(`Recognizing ${image}`);
 const rectangle = { left: 0, top: 0, width: 777, height: 250 };
@@ -375,7 +375,7 @@ var recognisedtxt = "";
   logger.silly(text);
   await worker.terminate();
   //Check for Spam with "new" Textstring from OCR
-  containsknownspam(recognisedtxt, userID, msgid);
+  containsknownspam(recognisedtxt, userID, msgid, channelID);
   return recognisedtxt
 })();
 
