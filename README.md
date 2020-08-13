@@ -19,6 +19,7 @@ This Bot has  3 main goals:
 ```cd PersonatorBot```<br>
 ```npm install winston```<br>
 ```npm install Woor/discord.io#gateway_v6```<br>
+```npm install tesseract.js```
 
 ## Configuration
 
@@ -26,14 +27,25 @@ This Bot has  3 main goals:
 ```RolestoCheck``` Supply the name of Roles to protect<br>
 ```Servertocheck``` The ID of the Server to protect<br>
 ```missingrightsnotifytags``` The ID of the Role to notify if a nonprivilidged user call ```!ban```<br>
+```tagagrouponmissingrights``` Make sure to disable if you don't want to notify a Role if a nonprivilidged User calls ```!ban```<br>
+```ChannelIDtorespondin``` A List (js array) of Channel ID's to listen for commands and to respond in<br>
+```staysilentonwrongchannelusedforcommand``` Decides if Bot tells user "Wrong channel" <br><br>
+```wrongchanneldescriptionforcommand``` Aforemontioned "Wrong channel" Message <br>
+```punishaction``` Ban or Kick the offending user<br>
 ```knownscamcopypastecontents``` Strings that are known Spam - *be careful with those*, they should be long and make sure to exclude false positives! <br>
 ```copypastespamprotectionenabled``` Make sure to disable if you don't want to ban users with certain Strings in their messages<br>
+```mee6inteagration_cmdclear_enabled``` Print extra Info in Embed about !Clear command of Mee6 (Usefull for heavy spammers) <br>
+```deleteafterreaction```  Allows Protected Users to "clear" (Delete) the Bot's messages (NEeds fideling to delete the reporing users command to - could be nice for Workflow of Admins) <br>
+```banacceptedreaction``` the Emoji afrementioned <br>
+```Reportemoji``` Not Implemented yet (will report the reacted message) <br>
+```Reportonemojireaction``` Not Implemented yet (will report the reacted message) <br>
+```minnamelengthtoprotect ``` min Username Length to check for impersonation<br>
 ```includediscriminator``` Decide if you want to include the #1234 numbers in the Namecheck. (false will ban users with the same name, but different discriminator) <br>
-```tagagrouponmissingrights``` Make sure to disable if you don't want to notify a Role if a nonprivilidged User calls ```!ban```<br>
+```warnforpotentialmatch ``` Currently not used (will warn about potential match in a info channel)
 
 There are more variables to play around with, but above covers the important stuff
 
-2) Invite the Bot to your Server via OAuth generated for your Bot. (Sorry this bot isn't running for multiple servers - it's supposed to be configured for each Server and run by some Admin of said Server) 
+2) Invite the Bot to your Server via OAuth generated for your Bot. <br> *(Sorry this bot isn't running for multiple servers - it's supposed to be configured for each Server and run by some Admin of said Server)*
 
 
 ## Run the Bot
