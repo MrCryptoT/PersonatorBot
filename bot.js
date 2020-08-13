@@ -320,11 +320,11 @@ function containsknownspam(message, userID, msgid, channelID){
 	logger.debug("checking msg: " + message);
 	for (var knownspam in knownscamcopypastecontents) {
 			logger.silly("spam included in message: " + message + "  \n" + message.includes(knownscamcopypastecontents[knownspam]));
-			logger.silly("user is protected: " + userisprotected);
+			logger.silly("user is protected: " + isuserprotected(userID));
 			if (message.includes(knownscamcopypastecontents[knownspam])) {
 				
 				logger.info("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
-				if (!userisprotected){
+				if (!isuserprotected(userID)){
 					//Fix Spambot behaviour and delete message before banning (this ensures the message get wiped even if user leaves) 
 					var deleteparams = {
 						channelID : channelID,
@@ -338,10 +338,10 @@ function containsknownspam(message, userID, msgid, channelID){
 						userID : userID
 					}
 					if (punishaction == "ban"){	
-						logger.debug("Banning " + user + " (" + userID + ") because of known spam");
+						logger.debug("Banning User " + userID + " because of known spam");
 						bot.ban(usertoban);
 					}else{
-						logger.debug("Kicking " + user + " (" + userID + ") because of known spam");
+						logger.debug("Kicking User " + userID + " because of known spam");
 						bot.kick(usertoban);	
 				}
 			}
