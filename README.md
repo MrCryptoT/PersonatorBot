@@ -25,6 +25,7 @@ This Bot has  3 main goals:
 ## Configuration
 
 1) Supply your Auth token in auth.json<br>
+
 ```RolestoCheck``` Supply the name of Roles to protect<br>
 ```Servertocheck``` The ID of the Server to protect<br>
 ```missingrightsnotifytags``` The ID of the Role to notify if a nonprivilidged user call ```!ban```<br>
