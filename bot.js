@@ -22,9 +22,9 @@ var staysilentonwrongchannelusedforcommand = true; //if set to true Bot will com
 var wrongchanneldescriptionforcommand = "Please use the #scam-alert Channel next time to report scammers, We'll take a look when we can.";	
 var punishaction = "ban" // "kick" or "ban" 
 var mee6inteagration_cmdclear_enabled = false;
-var banacceptedreaction = ["✅"];
+var banacceptedreaction = ["âœ…"];
 var deleteafterreaction = false;
-var Reportemoji = "🚨";
+var Reportemoji = "ðŸš¨";
 var Reportonemojireaction = true;
 //	Elaborate Setup
 var minnamelengthtoprotect = 1; //checks will be ignored if username shorter than this (without discriminator)
@@ -48,6 +48,10 @@ var copypastespamprotectionenabled = true;
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
+var request = require('request')
+var fs = require('fs')
+const path = require('path');
+const { createWorker, PSM } = require('../node_modules\\tesseract.js\\src');
 
 //Init Vars for use later
 var Memberstoprotect = [];
@@ -135,14 +139,31 @@ bot.on('messageReactionAdd', function (messageReaction, user, event) {
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
 	//set Footertext for embeds (thank u msg)
-	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️"
+	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! â¤ï¸";
 	//Now do message specific stuff
 	//logger.debug("Roles of calling user:");
 
 	//Check if messaging user is a memeber of a protected Role
-	userisprotected = isuserprotected(userID) //we assume as protected users are allowed to ban for now - needs improvement.
-logger.debug("is user protected : " + isuserprotected(userID))
+	userisprotected = isuserprotected(userID); //we assume as protected users are allowed to ban for now - needs improvement.
+	logger.debug("is user protected : " + isuserprotected(userID));
 	if (copypastespamprotectionenabled) {
+		logger.debug("attatchment undefined??");
+		logger.debug(typeof event.d.attachments[0]== 'undefined');
+		//event.d.attachments[i].url represents an attatchment, check if defined
+		if ((typeof event.d.attachments[0]== 'undefined') == false){
+			logger.debug("Trying to OCR");
+	//logger.debug((event.d.attachments[0].url));vLinkcolo
+	var OCR
+	;(async () => {
+		OCR = await getTextFromImage(event.d.attachments[0].url);
+		logger.debug("Recognised Text: " + OCR);
+		message += " " + OCR 
+	})()
+
+	
+	//logger.debug(containedtext);
+		//End of OCR Part
+		}
 		for (var knownspam in knownscamcopypastecontents) {
 			logger.silly("spam included in this message: " + message.includes(knownscamcopypastecontents[knownspam]));
 			logger.silly("user is protected: " + userisprotected);
@@ -327,6 +348,41 @@ logger.debug("is user protected : " + isuserprotected(userID))
 	
 });
 
+
+async function getTextFromImage(imageurl) {
+const [,, imagePath] = process.argv;
+const image = imageurl;
+logger.debug(`Recognizing ${image}`);
+const rectangle = { left: 0, top: 0, width: 777, height: 250 };
+const worker = createWorker({
+  logger: m => logger.debug(m),
+});
+
+
+var recognisedtxt = "";
+
+
+//Run first worker for whole picture
+(async () => {
+  await worker.load();
+  await worker.loadLanguage('eng');
+  await worker.initialize('eng');
+  await worker.setParameters({
+    tessedit_pageseg_mode: 6,
+  });
+  const { data: { text } } = await worker.recognize(image, { rectangle });
+ // recognisedtxt += text;
+  //recognisedtxt += await worker.recognize(image, { rectangle }).text;
+  logger.debug(text);
+  await worker.terminate();
+  return recognisedtxt
+})();
+
+
+
+
+}
+
 function sendembed_basic(channelID, color, titlestr, description, Footertext){
 	 bot.sendMessage({ to:channelID,
 			   embed: {
@@ -476,7 +532,7 @@ function runcheck(){
 
 	for (var user in bot.users) {
 		if (isuserprotected(bot.users[user].id)) {
-		Membersnamestoprotect += bot.users[user].username;	
+		Membersnamestoprotect.push(bot.users[user].username);	
 		}
 	}
 	logger.debug("All protected Users:");
@@ -498,10 +554,15 @@ function runcheck(){
 		logger.debug("Member " + user + " is protected: " + isuserprotected(user));
 		//Check if user is a protected member by userid - if so bail
 		if (isuserprotected(user) == false) {
+			logger.debug("User is not protected");
 			//Check if username matches (exactly) with protected User
 			var Usernameisprotectedadwasimpersonated = false;
+			logger.debug( Membersnamestoprotect[Membersnamestoprotect.indexOf(usernameplain)]);
+			logger.debug(usernameplain);
+			logger.debug("Names match exactly: " + Membersnamestoprotect[Membersnamestoprotect.indexOf(usernameplain)] == usernameplain);
 			var arraycontinasusername = (Membersnamestoprotect.indexOf(usernameplain) > -1);
 			if (arraycontinasusername){
+				
 				if (Membersnamestoprotect[Membersnamestoprotect.indexOf(usernameplain)] == usernameplain){
 					Usernameisprotectedadwasimpersonated = true;
 				}
