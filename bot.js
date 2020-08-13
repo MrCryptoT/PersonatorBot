@@ -35,7 +35,6 @@ var Loglevel = "debug"; //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  
 
 //	Command area	
 var commandprefix = "!"; //Mostly for debugging as scanning takes places when users join or rename
-var commandnametotriggerscan = "banhammer"; //Mostly for debugging as scanning takes places when users join or renamevar commandnametotriggerscan = "!banhammer"; //Mostly for debugging as scanning takes places when users join or rename
 var commandnametoban = "ban"; //banning via userid (calling user still needs proper rights)
 
 var helpargument = ["help", "info"];
@@ -300,18 +299,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			}
 		}
 	}
-		if (cmd === commandnametotriggerscan) {
-			Bannedusers = runcheck();
-			logger.debug(Bannedusers)
-			if (Bannedusers == "The following User's got"){
-				msgback = "Triggered Autoscan - sadly I couldn't find any matches. \n If you are sure there is a scammer, could you kindly let someone know?"
-				titlestr = "No Impersonators found Sorry!"
-			} else {
-				msgback = Bannedusers
-				titlestr = "Banned - Thx 4 the help!"
-			}
-			sendembed_basic(channelID, 0x442691, titlestr, msgback, Footertext);
-		}
+
 	}
 	
 });
