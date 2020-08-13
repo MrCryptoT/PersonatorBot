@@ -10,6 +10,7 @@ This Bot has  3 main goals:
 2) Allow manual Ban for usertags or UserIDs via command <br>( accessible to those protected roles . even if that user was never on the server the user gets banned) <br>
 2.1) If above command is used by a non protected member it serves as a notify function (printing out the ID to potentially ban and tagging a Role if config allows it) <br>
 3) Detect Spam and Scam posts (Libra and co) and Ban those Users within reasonable timespan (<1 Minute is the target for OCR) - this is currently beeing implemented
+
 ![unauthd](https://github.com/MrCryptoT/PersonatorBot/blob/master/img/cmd_ban_unauthed_user.png)
 
 ## Install Dependencies: 
