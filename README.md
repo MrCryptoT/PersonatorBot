@@ -34,7 +34,7 @@ This Bot has  3 main goals:
 ```staysilentonwrongchannelusedforcommand``` Decides if Bot tells user "Wrong channel" <br><br>
 ```wrongchanneldescriptionforcommand``` Aforemontioned "Wrong channel" Message <br>
 ```punishaction``` Ban or Kick the offending user<br>
-```knownscamcopypastecontents``` Strings that are known Spam - *be careful with those*, they should be long and make sure to exclude false positives! <br>
+```knownscamcopypastecontents``` Strings that are known Spam - **be careful with those**, they should be long and make sure to exclude false positives! <br>
 ```copypastespamprotectionenabled``` Make sure to disable if you don't want to ban users with certain Strings in their messages<br>
 ```mee6inteagration_cmdclear_enabled``` Print extra Info in Embed about !Clear command of Mee6 (Usefull for heavy spammers) <br>
 ```deleteafterreaction```  Allows Protected Users to "clear" (Delete) the Bot's messages (NEeds fideling to delete the reporing users command to - could be nice for Workflow of Admins) <br>
