@@ -22,9 +22,9 @@ var staysilentonwrongchannelusedforcommand = true; //if set to true Bot will com
 var wrongchanneldescriptionforcommand = "Please use the #scam-alert Channel next time to report scammers, We'll take a look when we can.";	
 var punishaction = "ban" // "kick" or "ban" 
 var mee6inteagration_cmdclear_enabled = false;
-var banacceptedreaction = ["âœ…"];
+var banacceptedreaction = ["✅"];
 var deleteafterreaction = false;
-var Reportemoji = "ðŸš¨";
+var Reportemoji = "🚨";
 var Reportonemojireaction = true;
 //	Elaborate Setup
 var minnamelengthtoprotect = 1; //checks will be ignored if username shorter than this (without discriminator)
@@ -48,9 +48,6 @@ var copypastespamprotectionenabled = true;
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
-var request = require('request')
-var fs = require('fs')
-const path = require('path');
 const { createWorker, PSM } = require('../node_modules\\tesseract.js\\src');
 
 //Init Vars for use later
@@ -139,7 +136,7 @@ bot.on('messageReactionAdd', function (messageReaction, user, event) {
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
 	//set Footertext for embeds (thank u msg)
-	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! â¤ï¸";
+	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️";
 	//Now do message specific stuff
 	//logger.debug("Roles of calling user:");
 
@@ -350,7 +347,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
 
 async function getTextFromImage(imageurl) {
-const [,, imagePath] = process.argv;
 const image = imageurl;
 logger.debug(`Recognizing ${image}`);
 const rectangle = { left: 0, top: 0, width: 777, height: 250 };
