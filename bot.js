@@ -41,7 +41,7 @@ var commandnametoban = "ban"; //banning via userid (calling user still needs pro
 var helpargument = ["help", "info"];
 
 //	copy paste protection area
-var knownscamcopypastecontents = ["Facebooks Libra coin just got released! Heres the Tweet", "indicator from tradest.io"]; //implement this later for the usual "hey libra released" spam
+var knownscamcopypastecontents = ["Facebooks Libra coin just got released! Heres the Tweet", "indicator from tradest.io", "www.tradest.io"]; //implement this later for the usual "hey libra released" spam
 var copypastespamprotectionenabled = true;
 
 //req's
@@ -144,52 +144,23 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	userisprotected = isuserprotected(userID); //we assume as protected users are allowed to ban for now - needs improvement.
 	logger.debug("is user protected : " + isuserprotected(userID));
 	if (copypastespamprotectionenabled) {
-		logger.debug("attatchment undefined??");
-		logger.debug(typeof event.d.attachments[0]== 'undefined');
-		//event.d.attachments[i].url represents an attatchment, check if defined
-		if ((typeof event.d.attachments[0]== 'undefined') == false){
-			logger.debug("Trying to OCR");
-	//logger.debug((event.d.attachments[0].url));vLinkcolo
-	var OCR
-	;(async () => {
-		OCR = await getTextFromImage(event.d.attachments[0].url);
-		logger.debug("Recognised Text: " + OCR);
-		message += " " + OCR 
-	})()
-
-	
-	//logger.debug(containedtext);
-		//End of OCR Part
-		}
-		for (var knownspam in knownscamcopypastecontents) {
-			logger.silly("spam included in this message: " + message.includes(knownscamcopypastecontents[knownspam]));
-			logger.silly("user is protected: " + userisprotected);
-			if (message.includes(knownscamcopypastecontents[knownspam])) {
-				logger.info("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
-				if (!userisprotected){
-					//Fix Spambot behaviour and delete message before banning (this ensures the message get wiped even if user leaves) 
-					var deleteparams = {
-						channelID : channelID,
-						messageID : event.d.id
-					}
-					logger.debug("deleting message " + deleteparams.messageID + " from User: (" + userID + ") because of known spam");
-					bot.deleteMessage(deleteparams);
-					//no mercy for spammers - byebye <3 
-					usertoban = {
-						serverID : Servertocheck,
-						userID : userID
-					}
-					if (punishaction == "ban"){	
-						logger.debug("Banning " + user + " (" + userID + ") because of known spam");
-						bot.ban(usertoban);
-					}else{
-						logger.debug("Kicking " + user + " (" + userID + ") because of known spam");
-						bot.kick(usertoban);	
-				}
+		//Check if msg contains spam, if so, we don't need to check attatchment (prenet race conditions with async) 
+		if (!containsknownspam(message, userID, event.d.id)){
+			//No spam in default msg, check if there is an attatchment URL, if so OCR it
+			logger.silly("attatchment undefined??");
+			logger.silly(typeof event.d.attachments[0]== 'undefined');
+			//event.d.attachments[i].url represents an attatchment, check if defined
+			if ((typeof event.d.attachments[0]== 'undefined') == false){
+				logger.debug("Trying to OCR");
+			//Start Async workers (Spam check handled in callback/checkforspam is triggered again after recognising)	
+			;(async () => {
+				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id);
+			})()
+			//End of OCR Part - we triggered the worker so continue with other messageevent related code
 			}
-		}		
+		}
 	}
-}
+	
 	//we are not in a Bot Channel, maybe inform if choosen to do so and if it's a command for us 
 	if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforcommand == false && (!ChannelIDtorespondin.includes(channelID))){
 		logger.debug("Informing User about wrong channel for Bot Interaction");
@@ -213,7 +184,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 		//    }
 
 		//Additional sanity checks needed: 
-			//is the user already banned? 
+			//is the user already banned? (can't implement this would only cover users in the guild sadly)
 		
 	//Ban users via Tag or ID if they already left the server 
 		if (cmd === commandnametoban) {
@@ -345,18 +316,51 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	
 });
 
+function containsknownspam(message, userID, msgid){
+	logger.debug("checking msg: " + message);
+	for (var knownspam in knownscamcopypastecontents) {
+			logger.silly("spam included in message: " + message + "  \n" + message.includes(knownscamcopypastecontents[knownspam]));
+			logger.silly("user is protected: " + userisprotected);
+			if (message.includes(knownscamcopypastecontents[knownspam])) {
+				
+				logger.info("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
+				if (!userisprotected){
+					//Fix Spambot behaviour and delete message before banning (this ensures the message get wiped even if user leaves) 
+					var deleteparams = {
+						channelID : channelID,
+						messageID : msgid
+					}
+					logger.debug("deleting message " + deleteparams.messageID + " from User: (" + userID + ") because of known spam");
+					bot.deleteMessage(deleteparams);
+					//no mercy for spammers - byebye <3 
+					usertoban = {
+						serverID : Servertocheck,
+						userID : userID
+					}
+					if (punishaction == "ban"){	
+						logger.debug("Banning " + user + " (" + userID + ") because of known spam");
+						bot.ban(usertoban);
+					}else{
+						logger.debug("Kicking " + user + " (" + userID + ") because of known spam");
+						bot.kick(usertoban);	
+				}
+			}
+			return true;
+		}		
+	}
+	return false;
+}
 
-async function getTextFromImage(imageurl) {
+
+async function getTextFromImage(imageurl, userID, msgid) {
 const image = imageurl;
 logger.debug(`Recognizing ${image}`);
 const rectangle = { left: 0, top: 0, width: 777, height: 250 };
 const worker = createWorker({
-  logger: m => logger.debug(m),
+  logger: m => logger.silly(m),
 });
 
-
 var recognisedtxt = "";
-
 
 //Run first worker for whole picture
 (async () => {
@@ -367,15 +371,13 @@ var recognisedtxt = "";
     tessedit_pageseg_mode: 6,
   });
   const { data: { text } } = await worker.recognize(image, { rectangle });
- // recognisedtxt += text;
-  //recognisedtxt += await worker.recognize(image, { rectangle }).text;
-  logger.debug(text);
+  recognisedtxt += text;
+  logger.silly(text);
   await worker.terminate();
+  //Check for Spam with "new" Textstring from OCR
+  containsknownspam(recognisedtxt, userID, msgid);
   return recognisedtxt
 })();
-
-
-
 
 }
 
