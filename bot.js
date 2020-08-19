@@ -47,7 +47,10 @@ var copypastespamprotectionenabled = true;
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var logger = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
-const { createWorker, PSM } = require('../node_modules\\tesseract.js\\src');
+const { createWorker, PSM, createScheduler } = require('../node_modules\\tesseract.js\\src');
+var Canvas = require('canvas');
+var https = require("https");
+var fs = require('fs');
 
 //Init Vars for use later
 var Memberstoprotect = [];
@@ -151,9 +154,25 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			//event.d.attachments[i].url represents an attatchment, check if defined
 			if ((typeof event.d.attachments[0]== 'undefined') == false){
 				logger.debug("Trying to OCR");
+									
+				var picheight = 900
+				var picwidth = 1080
+				var headerheight = 150
+				var heightdiff = picheight - headerheight
+				logger.debug("Pic Dimensions: " + picheight + " by " +  picwidth);
+				
 			//Start Async workers (Spam check handled in callback/checkforspam is triggered again after recognising)	
+				const rectangletop = { left: 0, top: 0, width: picwidth, height: headerheight }
+				const rectanglebottom = { left: 0, top: heightdiff, width: picwidth, height: headerheight }
+				const rectangleall = { left: 0, top: 0, width: picwidth, height: picheight }
+
 			;(async () => {
-				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID);
+				//Async call for rectangletop
+				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID, rectangletop);
+			})()
+			;(async () => {
+				//Async call for rectangletop
+				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID, rectanglebottom);
 			})()
 			//End of OCR Part - we triggered the worker so continue with other messageevent related code
 			}
@@ -340,17 +359,18 @@ function containsknownspam(message, userID, msgid, channelID){
 }
 
 
-async function getTextFromImage(imageurl, userID, msgid, channelID) {
+async function getTextFromImage(imageurl, userID, msgid, channelID, rectangle) {
+
 const image = imageurl;
+const scheduler = createScheduler();
 logger.debug(`Recognizing ${image}`);
-const rectangle = { left: 0, top: 0, width: 777, height: 250 };
 const worker = createWorker({
   logger: m => logger.silly(m),
 });
 
 var recognisedtxt = "";
 
-//Run first worker for whole picture
+//Run the jobs via OCR Worker Async
 (async () => {
   await worker.load();
   await worker.loadLanguage('eng');
@@ -358,9 +378,13 @@ var recognisedtxt = "";
   await worker.setParameters({
     tessedit_pageseg_mode: 6,
   });
-  const { data: { text } } = await worker.recognize(image, { rectangle });
+
+//Allright, since OCR can be Tricky, let's run 3 Jobs on our Worker, 1 for the top, 1 for the bottom and 1 for the whole picture (without rectangle) 
+  const { data: { text } } = await worker.recognize(imageurl, { rectangle});
   recognisedtxt += text;
-  logger.silly(text);
+
+
+  logger.silly(recognisedtxt);
   await worker.terminate();
   //Check for Spam with "new" Textstring from OCR
   containsknownspam(recognisedtxt, userID, msgid, channelID);
