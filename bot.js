@@ -1,53 +1,53 @@
 //Grab the legit Mod/Admin Users and protect them from Impersonation
-//can be expanded on 
 //If someone feels generous, some Coffee donations are never needed, but always appreciated <3 BTC: 1C1zWwmV44vrt4fWxnqa1FPm93kGuFQ6XL
 
 //Approach: 
 //Scan for similar Usernames as in specified Roles and if found kick or Ban (depending on Config) 
-//For long enough usernames we can also search character by character and calculate the match
 //this should be used carefully though as short usernames may match quite quickly (anything under 6 chars is probably overkill)
 
 //Also if the discriminator does not match we may only want to warn instead of banning/kicking
-//Same is true for "%"-matches if a username is really close to a protected Member
 
-
-//Config Area
-//	Basic Setup
-var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles to protect
+//Server Setup
+var RolestoCheck = ['Moderators', 'Admins', 'Trusted Trader']; //Names of Roles to protect, needs to be exact match
 var Servertocheck = "454523192657051668"; //Server ID to protect
+var ChannelIDtorespondin = ["740588315501133943"]; //ignore commands in all other channels - leave EMPTY [] to allow all channels!
 var missingrightsnotifytags = "<@&455177482581180428>"; //GroupID to Tag if a user with missing rights calls a ban - if enabled make sure thebot is allowed to use the entered tag
 //use <@id> to tag a User instead of a Role for missingrightsnotifytags
-var ChannelIDtorespondin = ["740588315501133943"]; //ignore commands in all other channels - leave EMPTY [] to allow all channels!
 var staysilentonwrongchannelusedforcommand = true; //if set to true Bot will completely ignore commands in non bot channels (supply all channel ID's the bot is allowed to talk in in it's var)
 var wrongchanneldescriptionforcommand = "Please use the #scam-alert Channel next time to report scammers, We'll take a look when we can.";	
 var punishaction = "ban" // "kick" or "ban" 
-var mee6inteagration_cmdclear_enabled = false;
-var banacceptedreaction = ["✅"];
-var deleteafterreaction = false;
-var Reportemoji = "🚨";
-var Reportonemojireaction = true;
-//	Elaborate Setup
-var minnamelengthtoprotect = 1; //checks will be ignored if username shorter than this (without discriminator)
+var minnamelengthtoprotect = 6; //checks will be ignored if username shorter than this (without discriminator)
 var includediscriminator = false; //disallow the same name even if discriminator is not the same - if true MrT#1234 and MrT#4321 can both be on the Server even if 1 of them is protected
-var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
-var tagagrouponmissingrights = true;
 var Loglevel = "debug"; //error: 0,  warn: 1,  info: 2,  http: 3,  verbose: 4,  debug: 5,  silly: 6 - always displays selected level and lower
 
-//	Command area	
+//	Commands	
 var commandprefix = "!"; //Mostly for debugging as scanning takes places when users join or rename
 var commandnametoban = "ban"; //banning via userid (calling user still needs proper rights)
-
 var helpargument = ["help", "info"];
 
+//	Elaborate Setup
+var mee6inteagration_cmdclear_enabled = false;
+
+var banacceptedreaction = ["✅"];
+var deleteafterreaction = false;
+
+var Reportemoji = "🚨";
+var Reportonemojireaction = true;
+
+var warnforpotentialmatch = true; //Warn for potential matchess where name is same but discriminator is different
+var tagagrouponmissingrights = true;
+
 //	copy paste protection area
-var knownscamcopypastecontents = ["Facebooks Libra coin just got released! Heres the Tweet", "indicator from tradest.io", "\nwww.tradest.io\n"]; //implement this later for the usual "hey libra released" spam
+var knownscamcopypastecontents = ["Facebooks Libra coin just got released! Heres the Tweet", "indicator from tradest.io", "\nwww.tradest.io\n"] //implement this later for the usual "hey libra released" spam
 var copypastespamprotectionenabled = true;
+var OCREnabled = true;
+var OCRonlydebug = true;
 
 //req's
 var Discord = require('discord.io'); //Discord API Library - not too current but works
-var logger = require('winston'); //Logger Lib
+var winston = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
-const { createWorker, PSM, createScheduler } = require('../node_modules\\tesseract.js\\src');
+const { createWorker, PSM, createScheduler } = require('..\\node_modules\\tesseract.js\\src');
 var Canvas = require('canvas');
 var https = require("https");
 var fs = require('fs');
@@ -58,13 +58,31 @@ var Membersnamestoprotect = [];
 var Memberstoban = [];
 var MembersIDtoban = [];
  
-// Init logger settings
-logger.remove(logger.transports.Console);
-logger.add(new logger.transports.Console, {
-	colorize: true
+const { combine, timestamp, label, printf } = winston.format;
+const myFormat = printf(({ level, message, label, timestamp }) => {
+  return `${timestamp} [${label}] ${level}: ${message}`;
+}); 
+ 
+const logger = winston.createLogger({
+  level: 'info',
+  format: combine(
+    label({ label: process.env.COMPUTERNAME }),
+    timestamp(),
+    myFormat
+  ),
+//  format: winston.format.combine(
+//    winston.format.timestamp(),
+//    winston.format.json()
+//   ),
+//  defaultMeta: { service: 'Personator Bot' },
+  transports: [
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+	new winston.transports.File({ filename: 'Log.log', level: Loglevel }),
+    new winston.transports.File({ filename: 'Debug.log', level: 'debug' }),
+	new winston.transports.Console({ level: 'info', 'timestamp':true, colorize: true}),
+  ],
 });
-logger.info('Started Logger - starting Bot');
-logger.level = Loglevel;
+
 
 // Initialize Discord Bot
 var bot = new Discord.Client({
@@ -74,8 +92,7 @@ var bot = new Discord.Client({
 
 bot.on('ready', function (evt) {
 	logger.info('Connected, Bot ready');
-    logger.debug('Logged in as: ');
-    logger.debug(bot.username + ' - (' + bot.id + ')');
+    logger.debug('Logged in as: ' + bot.username + ' - (' + bot.id + ')');
 	bot.getAllUsers();
 	var input = {
 		limit: 99999,
@@ -117,14 +134,14 @@ bot.on('messageReactionAdd', function (messageReaction, user, event) {
 	var emoji = messageReaction.d.emoji
 	var reactedinchannelid = messageReaction.d.channel_id
 	logger.debug("reacting user is protected: " + isuserprotected(reactinguserid));
-	logger.debug(messageReaction);
+	logger.silly(messageReaction);
 	if (emoji.name == Reportemoji){
 		logger.debug("Reportemoji detected");
 		if (Reportonemojireaction){
 			
 		}
 	}
-	logger.debug("reactedinchannelid : " + reactingmessageid + " due to Reaction: " + emoji.name );
+	logger.silly("reactedinchannelid : " + reactingmessageid + " due to Reaction: " + emoji.name );
 	if (banacceptedreaction.includes(emoji.name) && deleteafterreaction && isuserprotected(reactinguserid)){
 		logger.info("Removing our message due to reaction of protected user: " + reactingmessageid);
 		var delparams = {
@@ -138,13 +155,13 @@ bot.on('messageReactionAdd', function (messageReaction, user, event) {
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
 	//set Footertext for embeds (thank u msg)
-	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️";
+	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! â¤ï¸";
 	//Now do message specific stuff
 	//logger.debug("Roles of calling user:");
 
 	//Check if messaging user is a memeber of a protected Role
 	userisprotected = isuserprotected(userID); //we assume as protected users are allowed to ban for now - needs improvement.
-	logger.debug("is user protected : " + isuserprotected(userID));
+	logger.debug("is user" + userID + " protected : " + isuserprotected(userID));
 	if (copypastespamprotectionenabled) {
 		//Check if msg contains spam, if so, we don't need to check attatchment (prenet race conditions with async) 
 		if (!containsknownspam(message, userID, event.d.id)){
@@ -152,17 +169,17 @@ bot.on('message', function(user, userID, channelID, message, event) {
 			logger.silly("attatchment undefined??");
 			logger.silly(typeof event.d.attachments[0]== 'undefined');
 			//event.d.attachments[i].url represents an attatchment, check if defined
-			if ((typeof event.d.attachments[0]== 'undefined') == false){
+			if ((typeof event.d.attachments[0]== 'undefined') == false && OCREnabled){
 				logger.debug("Trying to OCR");
-									
+								
 				var picheight = 900
 				var picwidth = 1080
 				var headerheight = 150
 				var heightdiff = picheight - headerheight
-				logger.debug("Pic Dimensions: " + picheight + " by " +  picwidth);
-				
+				logger.silly("Pic Dimensions: " + picheight + " by " +  picwidth);
+
 			//Start Async workers (Spam check handled in callback/checkforspam is triggered again after recognising)	
-				const rectangletop = { left: 0, top: 0, width: picwidth, height: headerheight }
+				const rectangletop = { left: 0, top: 0, width: 777, height: headerheight }
 				const rectanglebottom = { left: 0, top: heightdiff, width: picwidth, height: headerheight }
 				const rectangleall = { left: 0, top: 0, width: picwidth, height: picheight }
 
@@ -180,8 +197,8 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	}
 	
 	//we are not in a Bot Channel, maybe inform if choosen to do so and if it's a command for us 
-	if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforcommand == false && (!ChannelIDtorespondin.includes(channelID))){
-		logger.debug("Informing User about wrong channel for Bot Interaction");
+if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforcommand == false && (ChannelIDtorespondin.length > 0 && (!ChannelIDtorespondin.includes(channelID))) ){
+	logger.info("Informing User about wrong channel for Bot Interaction");
 			sendembed_basic(channelID, 14177041, "Wrong Channel", wrongchanneldescriptionforcommand, Footertext);
 	}
 	
@@ -323,7 +340,11 @@ bot.on('message', function(user, userID, channelID, message, event) {
 	
 });
 
-function containsknownspam(message, userID, msgid, channelID){
+function containsknownspam(message, userID, msgid, channelID, onlyprintdebug = false){
+	if (onlyprintdebug) {
+		logger.verbose(message);
+		return false;
+	}
 	logger.debug("checking msg: " + message);
 	for (var knownspam in knownscamcopypastecontents) {
 			logger.silly("spam included in message: " + message + "  \n" + message.includes(knownscamcopypastecontents[knownspam]));
@@ -387,7 +408,7 @@ var recognisedtxt = "";
   logger.silly(recognisedtxt);
   await worker.terminate();
   //Check for Spam with "new" Textstring from OCR
-  containsknownspam(recognisedtxt, userID, msgid, channelID);
+  containsknownspam(recognisedtxt, userID, msgid, channelID, OCRonlydebug);
   return recognisedtxt
 })();
 
@@ -589,11 +610,11 @@ function runcheck(){
 					if (bot.users[user].username + bot.users[user].discriminator == bot.users[Memberstoprotect[Membersnamestoprotect.indexOf(bot.users[user].username)]].username + bot.users[Memberstoprotect[Membersnamestoprotect.indexOf(bot.users[user].username)]].discriminator){
 						Memberstoban.push(user);
 						MembersIDtoban.push(bot.users[user].id);
-						logger.info("Punishing User: " + user + " : " +  bot.users[user].username);	
+						logger.warn(punishaction + " User: " + user + " : " +  bot.users[user].username);	
 						//ban users
 						if (punishaction == "ban"){
-							logger.debug(bot.users[user].id);
-							logger.debug(user);
+							logger.silly(bot.users[user].id);
+							logger.silly(user);
 							var usertoban = {
 							serverID : Servertocheck,
 							userID : bot.users[user].id
@@ -602,8 +623,8 @@ function runcheck(){
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 						}else {
 							//assume kick
-							logger.debug(bot.users[user].id);
-							logger.debug(user);
+							logger.silly(bot.users[user].id);
+							logger.silly(user);
 								var usertokick = {
 								serverID : Servertocheck,
 								userID : bot.users[user].id
@@ -619,13 +640,13 @@ function runcheck(){
 						//ban users
 						if (punishaction == "ban"){
 								try {
-							logger.debug(bot.users[user].id);
-							logger.debug(user);
+							logger.silly(bot.users[user].id);
+							logger.silly(user);
 							var usertoban = {
 								serverID : Servertocheck,
 								userID : bot.users[user].id
 								}
-								bot.ban(usertoban);
+							bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 							} catch (e) {
 								 logger.debug(e)
@@ -633,8 +654,8 @@ function runcheck(){
 						}else {
 							//assume kick
 							//try {
-							logger.debug(bot.users[user].id);
-							logger.debug(user);
+							logger.silly(bot.users[user].id);
+							logger.silly(user);
 							var usertokick = {
 								serverID : Servertocheck,
 								userID : bot.users[user].id
