@@ -40,7 +40,7 @@ var commandnametoban = "ban"; //banning via userid (calling user still needs pro
 var helpargument = ["help", "info"];
 
 //	copy paste protection area
-var knownscamcopypastecontents = ["Facebooks Libra coin just got released! Heres the Tweet", "indicator from tradest.io", "www.tradest.io"]; //implement this later for the usual "hey libra released" spam
+var knownscamcopypastecontents = ["Facebooks Libra coin just got released! Heres the Tweet", "indicator from tradest.io", "\nwww.tradest.io\n"]; //implement this later for the usual "hey libra released" spam
 var copypastespamprotectionenabled = true;
 
 //req's
