@@ -77,7 +77,7 @@ const logger = winston.createLogger({
 //  defaultMeta: { service: 'Personator Bot' },
   transports: [
     new winston.transports.File({ filename: 'error.log', level: 'error' }),
-	new winston.transports.File({ filename: 'Log.log', level: Loglevel }),
+	new winston.transports.File({ filename: 'Log.log'}),
     new winston.transports.File({ filename: 'Debug.log', level: 'debug' }),
 	new winston.transports.Console({ level: 'info', 'timestamp':true, colorize: true}),
   ],
@@ -133,7 +133,7 @@ bot.on('messageReactionAdd', function (messageReaction, user, event) {
 	var reactinguserid = messageReaction.d.user_id;
 	var emoji = messageReaction.d.emoji
 	var reactedinchannelid = messageReaction.d.channel_id
-	logger.debug("reacting user is protected: " + isuserprotected(reactinguserid));
+	logger.debug("reacting user is protected: " + userisprotected);
 	logger.silly(messageReaction);
 	if (emoji.name == Reportemoji){
 		logger.debug("Reportemoji detected");
@@ -142,7 +142,7 @@ bot.on('messageReactionAdd', function (messageReaction, user, event) {
 		}
 	}
 	logger.silly("reactedinchannelid : " + reactingmessageid + " due to Reaction: " + emoji.name );
-	if (banacceptedreaction.includes(emoji.name) && deleteafterreaction && isuserprotected(reactinguserid)){
+	if (banacceptedreaction.includes(emoji.name) && deleteafterreaction && userisprotected){
 		logger.info("Removing our message due to reaction of protected user: " + reactingmessageid);
 		var delparams = {
 			 channelID: reactedinchannelid,
@@ -161,10 +161,10 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
 	//Check if messaging user is a memeber of a protected Role
 	userisprotected = isuserprotected(userID); //we assume as protected users are allowed to ban for now - needs improvement.
-	logger.debug("is user" + userID + " protected : " + isuserprotected(userID));
+	logger.debug("is user" + userID + " protected : " + userisprotected);
 	if (copypastespamprotectionenabled) {
 		//Check if msg contains spam, if so, we don't need to check attatchment (prenet race conditions with async) 
-		if (!containsknownspam(message, userID, event.d.id)){
+		if (!containsknownspam(message, userID, event.d.id, userisprotected)){
 			//No spam in default msg, check if there is an attatchment URL, if so OCR it
 			logger.silly("attatchment undefined??");
 			logger.silly(typeof event.d.attachments[0]== 'undefined');
@@ -185,11 +185,11 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
 			;(async () => {
 				//Async call for rectangletop
-				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID, rectangletop);
+				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID, rectangletop, userisprotected);
 			})()
 			;(async () => {
 				//Async call for rectangletop
-				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID, rectanglebottom);
+				await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID, rectanglebottom, userisprotected);
 			})()
 			//End of OCR Part - we triggered the worker so continue with other messageevent related code
 			}
@@ -262,7 +262,7 @@ if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforc
 			}
 		}
 		logger.debug("targeteduserisnotprotected" + targeteduserisnotprotected)
-		if (isuserprotected(userID) && suppliedvalidarg && targeteduserisnotprotected) {
+		if (userisprotected && suppliedvalidarg && targeteduserisnotprotected) {
 			if (usertoban == userID){
 				logger.info("User cant ban himself");
 			}else{
@@ -340,7 +340,7 @@ if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforc
 	
 });
 
-function containsknownspam(message, userID, msgid, channelID, onlyprintdebug = false){
+function containsknownspam(message, userID, msgid, channelID, isuserprotected, onlyprintdebug = false){
 	if (onlyprintdebug) {
 		logger.verbose(message);
 		return false;
@@ -348,11 +348,11 @@ function containsknownspam(message, userID, msgid, channelID, onlyprintdebug = f
 	logger.debug("checking msg: " + message);
 	for (var knownspam in knownscamcopypastecontents) {
 			logger.silly("spam included in message: " + message + "  \n" + message.includes(knownscamcopypastecontents[knownspam]));
-			logger.silly("user is protected: " + isuserprotected(userID));
+			//API Rate Issues if enabled - onyl debuging logger.silly("user is protected: " + isuserprotected(userID));
 			if (message.includes(knownscamcopypastecontents[knownspam])) {
 				
 				logger.info("knownspam in knownscamcopypastecontents:  " + knownscamcopypastecontents[knownspam]);
-				if (!isuserprotected(userID)){
+				if (!isuserprotected){
 					//Fix Spambot behaviour and delete message before banning (this ensures the message get wiped even if user leaves) 
 					var deleteparams = {
 						channelID : channelID,
@@ -380,7 +380,7 @@ function containsknownspam(message, userID, msgid, channelID, onlyprintdebug = f
 }
 
 
-async function getTextFromImage(imageurl, userID, msgid, channelID, rectangle) {
+async function getTextFromImage(imageurl, userID, msgid, channelID, rectangle, isuserprotected ) {
 
 const image = imageurl;
 const scheduler = createScheduler();
@@ -408,7 +408,7 @@ var recognisedtxt = "";
   logger.silly(recognisedtxt);
   await worker.terminate();
   //Check for Spam with "new" Textstring from OCR
-  containsknownspam(recognisedtxt, userID, msgid, channelID, OCRonlydebug);
+  containsknownspam(recognisedtxt, userID, msgid, channelID, isuserprotected, OCRonlydebug);
   return recognisedtxt
 })();
 
@@ -577,20 +577,20 @@ function runcheck(){
 	var partialmatchfound = false;
 	for (var user in AllUsers) {
 		var usernameplain = bot.users[user].username;
-		logger.debug("checking username: " + usernameplain + " -  " +  " : is similar to protected name? " + Membersnamestoprotect.includes(usernameplain));
+		logger.silly("checking username: " + usernameplain + " -  " +  " : is similar to protected name? " + Membersnamestoprotect.includes(usernameplain));
 		logger.silly( "Length of username :" + (usernameplain).length); 
 		//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
 		//check if minimal length is satisfied - if not bail
 		if (usernameplain.length > minnamelengthtoprotect){
-		logger.debug("Member " + user + " is protected: " + isuserprotected(user));
+		logger.silly("Member " + user + " is protected: " + isuserprotected(user));
 		//Check if user is a protected member by userid - if so bail
 		if (isuserprotected(user) == false) {
-			logger.debug("User is not protected");
+			logger.silly("User is not protected");
 			//Check if username matches (exactly) with protected User
 			var Usernameisprotectedadwasimpersonated = false;
-			logger.debug( Membersnamestoprotect[Membersnamestoprotect.indexOf(usernameplain)]);
-			logger.debug(usernameplain);
-			logger.debug("Names match exactly: " + Membersnamestoprotect[Membersnamestoprotect.indexOf(usernameplain)] == usernameplain);
+			logger.silly( Membersnamestoprotect[Membersnamestoprotect.indexOf(usernameplain)]);
+			logger.silly(usernameplain);
+			logger.silly("Names match exactly: " + Membersnamestoprotect[Membersnamestoprotect.indexOf(usernameplain)] == usernameplain);
 			var arraycontinasusername = (Membersnamestoprotect.indexOf(usernameplain) > -1);
 			if (arraycontinasusername){
 				
@@ -619,7 +619,7 @@ function runcheck(){
 							serverID : Servertocheck,
 							userID : bot.users[user].id
 							}
-							bot.ban(usertoban);
+							//bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 						}else {
 							//assume kick
@@ -646,7 +646,7 @@ function runcheck(){
 								serverID : Servertocheck,
 								userID : bot.users[user].id
 								}
-							bot.ban(usertoban);
+							//bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 							} catch (e) {
 								 logger.debug(e)
