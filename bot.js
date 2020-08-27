@@ -243,10 +243,11 @@ if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforc
 		
 	//Ban users via Tag or ID if they already left the server 
 		if (cmd === commandnametoban) {
-			const banReason = args.slice(2);
+			args.slice(2);
+			var banReason = Array.prototype.slice.call(args, 2).join(" ");
 			logger.silly("entered " + commandnametoban + " command region - cmd recognised!");
 			logger.silly('Arg1 ' + args[1]);
-			logger.silly('Arg2 ' + args[2]);
+			logger.silly('BanReason : ' + banReason);
 			var tagsexist = false;
 			var suppliedvalidarg = false  
 			usertoban = "";
@@ -290,11 +291,12 @@ if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforc
 				   logger.info("Bannning user via Ban command");
 				   var usertobanid = {
 						serverID : Servertocheck,
-						userID : usertoban
+						userID : usertoban,
+						reason : banReason
 						}
 					bot.ban(usertobanid);
-					logger.info("trying to ban userid : " + usertoban);
-					sendembed_basic(channelID, 3066993, "User Banned!", 'Alright, <@' + usertoban + '> has been banned for ' + banReason, Footertext);
+					logger.info("trying to ban userid : " + usertoban + " for" + usertobanid.reason);
+					sendembed_basic(channelID, 3066993, "User Banned!", 'Alright, <@' + usertoban + '> has been banned for ' + usertobanid.reason, Footertext);
 				} 
 				catch (error) {
 					sendembed_basic(channelID, 0x442691, "Couldn't Ban", 'couldn\'t ban User Sorry! Make sure you supply a correct ID or Tag. \n Also we cannot ban a user twice ;)',  Footertext);
@@ -383,14 +385,19 @@ function containsknownspam(message, userID, msgid, channelID, isuserprotected, o
 					//no mercy for spammers - byebye <3 
 					usertoban = {
 						serverID : Servertocheck,
-						userID : userID
+						userID : userID,
+						reason : "Spamprotection by PersonatorBot"
 					}
 					if (punishaction == "ban"){	
-						logger.debug("Banning User " + userID + " because of known spam");
+						logger.debug("Banning User " + userID + " for" + usertoban.reason);
 						bot.ban(usertoban);
 					}else{
+						usertokick = {
+						serverID : Servertocheck,
+						userID : userID
+					}
 						logger.debug("Kicking User " + userID + " because of known spam");
-						bot.kick(usertoban);	
+						bot.kick(usertokick);	
 				}
 			}
 			return true;
@@ -608,6 +615,7 @@ function runcheck(){
 	AllUsers = bot.servers[Servertocheck].members;
 	Memberstoban = [];
 	tmpstring = "The following User's got";
+	banReason = "Impersonation autodetection by PersonatorBot"
 	var partialmatchfound = false;
 	for (var user in AllUsers) {
 		var usernameplain = bot.users[user].username;
@@ -650,7 +658,8 @@ function runcheck(){
 							logger.silly(user);
 							var usertoban = {
 							serverID : Servertocheck,
-							userID : bot.users[user].id
+							userID : bot.users[user].id,
+							reason : banReason
 							}
 							bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
@@ -658,10 +667,10 @@ function runcheck(){
 							//assume kick
 							logger.silly(bot.users[user].id);
 							logger.silly(user);
-								var usertokick = {
-								serverID : Servertocheck,
-								userID : bot.users[user].id
-								}
+							var usertokick = {
+							serverID : Servertocheck,
+							userID : bot.users[user].id
+							}
 							bot.kick(usertokick);
 							tmpstring += " kicked:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 							}
@@ -677,7 +686,8 @@ function runcheck(){
 							logger.silly(user);
 							var usertoban = {
 								serverID : Servertocheck,
-								userID : bot.users[user].id
+								userID : bot.users[user].id,
+								reason : banReason
 								}
 							bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
