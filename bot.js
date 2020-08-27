@@ -47,7 +47,7 @@ var OCRonlydebug = true;
 var Discord = require('discord.io'); //Discord API Library - not too current but works
 var winston = require('winston'); //Logger Lib
 var auth = require('./auth.json');//Discord Bot Token
-const { createWorker, PSM, createScheduler } = require('..\\node_modules\\tesseract.js\\src');
+const { createWorker, PSM, createScheduler } = require('C:\\_Custom\\PersonatorBot\\node_modules\\tesseract.js\\src');
 var Canvas = require('canvas');
 var https = require("https");
 var fs = require('fs');
@@ -55,6 +55,8 @@ var fs = require('fs');
 //Init Vars for use later
 var Memberstoprotect = [];
 var Membersnamestoprotect = [];
+var AllUsers;
+var AllUsersCache = [];
 var Memberstoban = [];
 var MembersIDtoban = [];
  
@@ -64,7 +66,7 @@ const myFormat = printf(({ level, message, label, timestamp }) => {
 }); 
  
 const logger = winston.createLogger({
-  level: 'info',
+  level: 'debug',
   format: combine(
     label({ label: process.env.COMPUTERNAME }),
     timestamp(),
@@ -78,7 +80,7 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.File({ filename: 'error.log', level: 'error' }),
 	new winston.transports.File({ filename: 'Log.log'}),
-    new winston.transports.File({ filename: 'Debug.log', level: 'debug' }),
+    new winston.transports.File({ filename: 'Debug.log', level: 'silly' }),
 	new winston.transports.Console({ level: 'info', 'timestamp':true, colorize: true}),
   ],
 });
@@ -98,7 +100,14 @@ bot.on('ready', function (evt) {
 		limit: 99999,
 	}
 	bot.getMembers(input);
-    setTimeout(() => runcheck(), 1500);
+    
+	
+	
+	//Build Arrays with protecteduser info, called all 10 minutes (will need top include some type of "running" indicator to prevent other code from running until rebuild finished)
+	Getalluserdataandbuildarrays()
+	setInterval(() => Getalluserdataandbuildarrays(), 100000);
+	//run a first check after startup to check for impersonators if feature is enabled 
+	setTimeout(() => runcheck(), 2500);
 
 });
 
@@ -154,6 +163,17 @@ bot.on('messageReactionAdd', function (messageReaction, user, event) {
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
+	
+	var author = {
+	serverID: Servertocheck,
+	userID: userID,
+	}
+	var member;
+	 setTimeout(() =>  member = bot.getMember(author), 1500);
+	 
+	 
+	 
+	 
 	//set Footertext for embeds (thank u msg)
 	var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! â¤ï¸";
 	//Now do message specific stuff
@@ -379,7 +399,6 @@ function containsknownspam(message, userID, msgid, channelID, isuserprotected, o
 	return false;
 }
 
-
 async function getTextFromImage(imageurl, userID, msgid, channelID, rectangle, isuserprotected ) {
 
 const image = imageurl;
@@ -478,75 +497,35 @@ function sendembed_report(channelID, color, titlestr, description, Footertext, u
 	}
 }
 function isuserprotected(userid){
-	bot.getAllUsers();
-	var input = {
-		limit: 99999,
-	}
-	bot.getMembers(input);
-
-	var author = {
-	serverID: Servertocheck,
-	userID: userid,
-	}
-	var member;
-	 setTimeout(() =>  member = bot.getMember(author), 1500);
-	//member = bot.getMember(author);
-	   
-	//Grab Roles of messaging user
-	if (typeof bot.servers[Servertocheck].members[userid] == 'undefined'){
-		//Member is not a member of the server anymore, so can't be protected user
-		return false;
-	}
-	var memberroles = bot.servers[Servertocheck].members[userid].roles;
-	//logger.debug(memberroles);	
-	//Grab all Serverroles
-	var AllRoles = bot.servers[Servertocheck].roles;
-	//Grab ID's of Mentioned Roles to protect
-	var IDstoprotect = [];
-	for (var Role in AllRoles) {
-		if (RolestoCheck.includes(AllRoles[Role].name)) {
-			IDstoprotect.push(AllRoles[Role].id);
-		}
-	}
 	//Check if messaging user is a memeber of a protected Role
-	var userisprotected = false //we assume as protected users are allowed to ban for now - needs improvement.
-	for (var role in memberroles) {
-	if  (IDstoprotect.includes(memberroles[role])){
-		userisprotected = true
-		}
-	}
-	
-	if (userisprotected){
+	logger.verbose("Bot is monitoring " + Memberstoprotect.length + " protected Usernames");
+logger.verbose(Memberstoprotect);
+	if (Memberstoprotect.includes(userid)){
 		return true;
 	}else{
 		return false;
 	}
 }
 
-//Function to actualy build current user Array's and check for same username's
-function runcheck(){
-		logger.silly("Servers : " + bot.servers);	
+
+function Getalluserdataandbuildarrays(){
+	logger.silly("Servers : " + bot.servers);	
 	//Grab all Users we know of on the Server to protect
-	
-	//var AllUsers = bot.getAllUsers();
-	
-	
+
 	bot.getAllUsers();
 	//Force Cache to update by grabbing all users explicitly
 	var input = {
 		limit: 99999,
 	}
 	bot.getMembers(input);
-	
-	var AllUsers = bot.servers[Servertocheck].members;
-	
-
-	//var AllUsers = bot.getAllUsers();
+	//overwrite current userarray
+	AllUserstmp = bot.servers[Servertocheck].members;
+	//AllUsers = bot.users
 	logger.silly("Users:")
 	var usercount = 0;
-	for (var property in AllUsers) {
-		if( AllUsers.hasOwnProperty( property ) ) {
-		   logger.silly(property + ": " + AllUsers[property])
+	for (var user in AllUserstmp) {
+		if( AllUserstmp.hasOwnProperty( user ) ) {
+		   logger.silly(user + ": " + AllUserstmp[user])
 		   usercount += 1;
 		}
 	}
@@ -554,24 +533,79 @@ function runcheck(){
 	logger.verbose("Total Membercount: " + bot.servers[Servertocheck].member_count);
 	//Grab all Roles on the Server
 	
-	logger.debug("add users to memberstoprotect");
-	for (var user in AllUsers) {
-		if (isuserprotected(user)){
-		Memberstoprotect.push(user);
+	
+	logger.debug("API Call bot.getAllUsers();")
+	bot.getAllUsers();
+	
+	
+	//reset memberstoprotect array
+	Memberstoprotect = [];
+	//Let's get a list of all users and check if they are protected
+	
+	
+	//Grab all Serverroles
+	var AllRoles = bot.servers[Servertocheck].roles;
+	//Grab ID's of Mentioned Roles to protect
+	var IDstoprotect = [];
+	for (var Role in AllRoles) {
+			if (RolestoCheck.includes(AllRoles[Role].name)) {
+				IDstoprotect.push(AllRoles[Role].id);
+			}
 		}
+	for (var user in AllUserstmp) {
+		//if (typeof bot.servers[Servertocheck].members[user] == 'undefined'){
+			//Member is not a member of the server anymore, so can't be protected user
+		//	logger.debug("Couldn't find user in Guildlist, is he a Member?")
+		//	return false;
+		//}
+		//Check if messaging user is a memeber of a protected Role
+		var userisprotected = false //we assume as protected users are allowed to ban for now - needs improvement.
+		
+		var memberroles = bot.servers[Servertocheck].members[user].roles;	
+		for (var role in memberroles) {
+			if  (IDstoprotect.includes(memberroles[role])){
+				userisprotected = true
+				logger.silly("Member " + user + " is protected: " + Memberstoprotect.includes(user));
+				}
+			}
+			
+		if (userisprotected){
+			logger.debug("pushing user to protected users" + user);
+			Memberstoprotect.push(user);
+			//Keep a cache 
+			AllUsersCache.push({userid: user, userisprotected: true})
+		}else{
+			//Keep a cache - if a user is not included its likely he is new and therefore likely not protected. 
+			//this could be used to triggger a rebuild of the arrays tho (But doing this on every rename or message seems API overkill, let's respect discords API Rate limits as we are a friendly bot =) ) 
+			AllUsersCache.push({userid: user, userisprotected: false})
+		}		
+	
 	}
 
+	//Since we know which users are protected now, note down names to protect
 	for (var user in bot.users) {
-		if (isuserprotected(bot.users[user].id)) {
+		if (Memberstoprotect.includes(bot.users[user].id)) {
 		Membersnamestoprotect.push(bot.users[user].username);	
 		}
 	}
+	
 	logger.debug("All protected Users:");
-	for (var property in Memberstoprotect) {
-    if( Memberstoprotect.hasOwnProperty( property ) ) {
-       logger.verbose(property + ": " + Memberstoprotect[property]);
-		}
-	}
+	
+	var i;
+for (i = 0; i < Memberstoprotect.length -1; i++) {
+  logger.verbose(Memberstoprotect[i]);
+}
+	
+if (userisprotected){
+			return true;
+		}else{
+			return false;
+		}	
+}
+
+//Function to actualy build current user Array's and check for same username's
+function runcheck(){
+	AllUsers = bot.servers[Servertocheck].members;
 	Memberstoban = [];
 	tmpstring = "The following User's got";
 	var partialmatchfound = false;
@@ -582,9 +616,8 @@ function runcheck(){
 		//	var usernameconverted = convertInputReverse(usernameplain).lower; //currently there is no fuzzing Lib used
 		//check if minimal length is satisfied - if not bail
 		if (usernameplain.length > minnamelengthtoprotect){
-		logger.silly("Member " + user + " is protected: " + isuserprotected(user));
 		//Check if user is a protected member by userid - if so bail
-		if (isuserprotected(user) == false) {
+		if (Memberstoprotect.includes(user) == false) {
 			logger.silly("User is not protected");
 			//Check if username matches (exactly) with protected User
 			var Usernameisprotectedadwasimpersonated = false;
@@ -619,7 +652,7 @@ function runcheck(){
 							serverID : Servertocheck,
 							userID : bot.users[user].id
 							}
-							//bot.ban(usertoban);
+							bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 						}else {
 							//assume kick
@@ -646,7 +679,7 @@ function runcheck(){
 								serverID : Servertocheck,
 								userID : bot.users[user].id
 								}
-							//bot.ban(usertoban);
+							bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
 							} catch (e) {
 								 logger.debug(e)
