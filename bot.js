@@ -292,7 +292,8 @@ if (message.substring(0, 1) == commandprefix && staysilentonwrongchannelusedforc
 				   var usertobanid = {
 						serverID : Servertocheck,
 						userID : usertoban,
-						reason : banReason
+						reason : banReason,
+						lastDays : 1
 						}
 					bot.ban(usertobanid);
 					logger.info("trying to ban userid : " + usertoban + " for" + usertobanid.reason);
@@ -386,7 +387,8 @@ function containsknownspam(message, userID, msgid, channelID, isuserprotected, o
 					usertoban = {
 						serverID : Servertocheck,
 						userID : userID,
-						reason : "Spamprotection by PersonatorBot"
+						reason : "Spamprotection by PersonatorBot",
+						lastDays : 1
 					}
 					if (punishaction == "ban"){	
 						logger.debug("Banning User " + userID + " for" + usertoban.reason);
@@ -659,7 +661,8 @@ function runcheck(){
 							var usertoban = {
 							serverID : Servertocheck,
 							userID : bot.users[user].id,
-							reason : banReason
+							reason : banReason,
+							lastDays : 1
 							}
 							bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
@@ -687,7 +690,8 @@ function runcheck(){
 							var usertoban = {
 								serverID : Servertocheck,
 								userID : bot.users[user].id,
-								reason : banReason
+								reason : banReason,
+								lastDays : 1
 								}
 							bot.ban(usertoban);
 							tmpstring += " banned:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
