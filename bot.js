@@ -121,7 +121,6 @@ const logger = winston.createLogger({
     ],
 });
 
-
 // Initialize Discord Bot
 var bot = new Discord.Client({
     token: auth.token,
@@ -136,8 +135,6 @@ bot.on('ready', function(evt) {
         limit: 99999,
     }
     bot.getMembers(input);
-
-
 
     //Build Arrays with protecteduser info, called all 10 minutes (will need top include some type of "running" indicator to prevent other code from running until rebuild finished)
     Getalluserdataandbuildarrays()
@@ -171,14 +168,12 @@ bot.on('guildMemberUpdate', function(oldMember, newMember) {
 //Event fires on a reaction to some Message
 bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
 
-
     //Check if reacting user is a memeber of a protected Role
     userisprotected = isuserprotected(messageReaction.d.user_id)
     var reactingmessageid = messageReaction.d.message_id;
     var reactinguserid = messageReaction.d.user_id;
     var emoji = messageReaction.d.emoji
     var reactedinchannelid = messageReaction.d.channel_id
-
     logger.debug("reacting user is protected: " + userisprotected);
 
     if (emoji.name == Reportemoji) {
@@ -204,20 +199,12 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         bot.ban(usertobanid);
                         reactingmessageid
                         var embedtext = 'Alright, <@' + msgauthorid + '> has been manually banned by ' + reactinguserid
-
                         sendembed_basic(reactedinchannelid, 3066993, title, embedtext, Footertext);
-
-                        //Check if orig message is from the reported user, if it is NOT we can delete it (as it was the report itself) 
-                        //if (!origmsgauthor == msgidauthorarray[listentry].usertoban && Deletereportcommandswhenbanned){
                         logger.verbose("Original Message ID to delete (report)" + msgidauthorarray[listentry].origmsgid)
                     }
                 } else {
-
-
-                    if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid) {
-
+                    if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author))) {
                         lastreportmsgid = messageReaction.d.message_id
-
                         logger.info("Message: " + msgidauthorarray[listentry].msgid + " from author" + msgidauthorarray[listentry].author)
 
                         var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban` \nYou can also react using a " + banacceptedreaction + "-Emoji to accept this report and ban the User"
@@ -279,7 +266,6 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                     banreasonstr = Array.prototype.slice.call(args, 2).join(" ");
                 }
 
-
                 var usertobanid = {
                     serverID: Servertocheck,
                     userID: msgidauthorarray[listentry].usertoban,
@@ -295,15 +281,11 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                 //if (!origmsgauthor == msgidauthorarray[listentry].usertoban && Deletereportcommandswhenbanned){
                 logger.verbose("Original Message ID to delete (report)" + msgidauthorarray[listentry].origmsgid)
 
-
                 var delparamsstr = {
                     channelID: reactedinchannelid,
                     messageID: msgidauthorarray[listentry].origmsgid
                 }
                 bot.deleteMessage(delparamsstr);
-
-                //	}
-
             }
         }
 
@@ -332,7 +314,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
     }
     var member;
     setTimeout(() => member = bot.getMember(author), 1500);
-
 
     //set Footertext for embeds (thank u msg)
     var Footertext = "Thanks alot " + user + " for helping us in the fight against spammers and scammers! ❤️";
