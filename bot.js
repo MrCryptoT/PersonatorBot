@@ -469,7 +469,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
                 //Either user has no rights to call this command, or there was an Invalid Argument used 
                 var missingrightsmessage
                 var missingrightstitle
-                var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
+                var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban` \nYou can also react using a " + banacceptedreaction + "-Emoji to accept this report and ban the User"
                 if (mee6inteagration_cmdclear_enabled == true) {
                     usagestring += "\nIf I didn't clean up all spam automatically Mee6 might be able to help out with \n `!clear @usernametag numberofmsgs` \n"
                 }
