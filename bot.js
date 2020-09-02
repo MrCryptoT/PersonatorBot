@@ -67,11 +67,11 @@ var MembersIDtoban = [];
 var msgidauthorarray = [];
 var usergotjustreported = false;
 var reportisactive = false;
-var reporteduserIDviaemoji = 0;
-var reporteduserIDviaemojibyuserid = 0;
-var lastreportmsgid = 0;
+var reporteduserIDviaemoji
+var reporteduserIDviaemojibyuserid
+var lastreportmsgid
 var anwsermsgid
-
+var banproposals = [] //List of all proposal ID's
 const {
     combine,
     timestamp,
@@ -135,7 +135,6 @@ bot.on('ready', function(evt) {
         limit: 99999,
     }
     bot.getMembers(input);
-
     //Build Arrays with protecteduser info, called all 10 minutes (will need top include some type of "running" indicator to prevent other code from running until rebuild finished)
     Getalluserdataandbuildarrays()
     setInterval(() => Getalluserdataandbuildarrays(), 100000);
@@ -183,11 +182,15 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
             var msgauthorid
             for (var listentry in msgidauthorarray) {
                 //Only check if user is admin, and is not reporting a bot (And is not reporting a protected user) 
-                if (userisprotected && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author))) {
+                if (userisprotected && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && !(banproposals.includes(msgidauthorarray[listentry].author))) {
+                    //Ban the user (basically an easier report command without typing)
+                    logger.verbose("Entered reportemoji area - trying to figure out what to do")
                     if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid) {
-                        lastreportmsgid = messageReaction.d.message_id
-                        msgauthorid = msgidauthorarray[listentry].author
+                        //find user for current message - search array 
+                        logger.verbose("Found correspondig Listentry in msgidauthorarray, checking values")
 
+                        msgauthorid = msgidauthorarray[listentry].author
+                        reporteduserIDviaemoji = msgauthorid //will be grabed immendiatly after
                         var usertobanid = {
                             serverID: Servertocheck,
                             userID: msgauthorid,
@@ -203,105 +206,254 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         logger.verbose("Original Message ID to delete (report)" + msgidauthorarray[listentry].origmsgid)
                     }
                 } else {
-                    if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author))) {
-                        lastreportmsgid = messageReaction.d.message_id
-                        logger.info("Message: " + msgidauthorarray[listentry].msgid + " from author" + msgidauthorarray[listentry].author)
+                    //Report the user and keep and Entry of the Report if not reported already (no need for multiple info cars)
+                    if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && !(banproposals.includes(msgidauthorarray[listentry].author))) {
 
-                        var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban` \nYou can also react using a " + banacceptedreaction + "-Emoji to accept this report and ban the User"
+                        var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
+                        if (acceptanddenybans) {
+                            usagestring += " \nYou can also react to this embed using a " + banacceptedreaction[0] + "-Emoji to accept, or a " + bandeniedreaction[0] + " to deny this report immediatly!"
+                        }
                         msgauthorid = msgidauthorarray[listentry].author
+                        reporteduserIDviaemoji = msgauthorid
                         var Footertext = "Thanks alot " + bot.users[reactinguserid].username + " for helping us in the fight against spammers and scammers! ❤️";
                         reportmsg = '***Thanks alot*** for trying to help **' + bot.users[reactinguserid].username + '**, We passed it on to our Mods!'
                         title = "Thanks for the Report!"
                         usergotjustreported = true;
+                        lastreportmsgid = messageReaction.d.message_id
                         reporteduserIDviaemoji = msgauthorid
                         reporteduserIDviaemojibyuserid = reactinguserid
                         reportisactive = true;
+
                         if (tagagrouponmissingrights) {
                             reportmsg += "\nWe notified " + missingrightsnotifytags + " to take a look when possible."
-                            bot.sendMessage({
+                            setTimeout(() => sendembed_report(reactedinchannelid, 0x442691, title, reportmsg, Footertext, msgauthorid, usagestring), 666);
+
+
+                            setTimeout(() => bot.sendMessage({
                                 to: reactedinchannelid,
                                 message: missingrightsnotifytags + " Have a look at this please, the reported ID is in the Info-Card"
                             }, (err, res) => {
-                                anwsermsgid = res.id
-
-                            });
+                                anwsermsgid = (res.id);
+                                //logger.info("anwserid: " + anwsermsgid)
+                            }), 1111);
                         }
-                        sendembed_report(reactedinchannelid, 0x442691, title, reportmsg, Footertext, msgauthorid, usagestring);
-
+                        //set report entry via ID
+                        //banproposals.push(messageReaction.d.message_id)
                     }
                 }
             }
         }
     }
     logger.silly("reactedinchannelid : " + reactingmessageid + " due to Reaction: " + emoji.name);
+    logger.info("reportisactive :" + reportisactive)
     if (banacceptedreaction.includes(emoji.name) && userisprotected && reportisactive) {
-        for (var listentry in msgidauthorarray) {
-            //If we react to a bot report message with accept emoji, ban reported user =) (Spares typing =) )
-            if (lastreportmsgid == msgidauthorarray[listentry].msgid && msgidauthorarray[listentry].botmsg == true) {
-                //logger.info("Message: " + msgidauthorarray[listentry].msgid + " from author" + msgidauthorarray[listentry].author )
+        var proposalid, usertoban, anwsermessageid, isbotmsg, lastreportedmsgid, reportingauthor
+        for (var l in msgidauthorarray) {
+            for (var le in msgidauthorarray) {
+                if (msgidauthorarray[l].origmsgid == msgidauthorarray[le].msgid) {
+                    origmsg = msgidauthorarray[le].origmsg;
+                    origmsgauthor = msgidauthorarray[le].author;
+                    isbotmsg = msgidauthorarray[le].botmsg;
+                    lastreportedmsgid = msgidauthorarray[le].lastreportmsgid
+                }
+                if (msgidauthorarray[le].msgid == lastreportedmsgid) {
+                    reportingauthor = msgidauthorarray[le].author;
+                }
+            }
 
-                //logger.info( " usertoban: " + msgidauthorarray[listentry].usertoban)
-                var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
-                msgauthorid = msgidauthorarray[listentry].reportedby
-                var Footertext = "Thanks alot " + bot.users[msgauthorid].username + " for helping us in the fight against spammers and scammers! ❤️";
-                title = "Thats a BANHAMMER!"
-                usergotjustreported = true;
-                reportisactive = true;
-                logger.info("Banning user due to accepted report (by emoji)" + msgauthorid)
+            //make sure we only process the reacted to proposal, so figure out which proposal ID we are reacting to
+            if (msgidauthorarray[l].msgid == reactingmessageid) {
+                proposalid = msgidauthorarray[l].usertoban
+                origmsgid = msgidauthorarray[l].origmsgid
 
-                //get orig msg for reported entry (current msgid contains the originally reffered ID, so let's grab that one)
-                var origmsg, origmsgauthor = "";
-                for (var le in msgidauthorarray) {
-                    if (msgidauthorarray[listentry].origmsgid == msgidauthorarray[le].msgid) {
-                        origmsg = msgidauthorarray[le].origmsg
-                        origmsgauthor = msgidauthorarray[le].author
+                logger.info("proposalid == origmsgauthor :" + proposalid + " " + origmsgauthor)
+                logger.info("accepted proposal ID through Emoji: " + proposalid + "\n with params origmsgauthor  :" + origmsgauthor)
+                logger.info("msgidauthorarray[l].botmsg =" + msgidauthorarray[l].botmsg)
+                logger.info("is bot message :" + isbotmsg)
+                logger.info("reportingauthor :" + reportingauthor)
+                logger.info("msgidauthorarray[l].anwsermsg :" + msgidauthorarray[l].anwsermsg)
+                for (proposal in banproposals) {
+                    logger.info("Checking Proposal with ID: " + banproposals[proposal])
+                    //Only process current proposal
+                    if (proposalid == banproposals[proposal]) {
+                        logger.info("Found proposalID, processing " + banproposals[proposal])
+                        //&& msgidauthorarray[listentry].msgid == reactingmessageid as part above 
+
+                        logger.info("Proposal accepted event recognised - processing proposal :" + proposalid)
+                        var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
+                        msgauthorid = msgidauthorarray[l].reportedby
+                        var Footertext = "Thanks alot " + bot.users[msgauthorid].username + " for helping us in the fight against spammers and scammers! ❤️";
+                        title = "Thats a BANHAMMER!"
+                        logger.info("Banning user due to accepted report (by emoji)" + msgauthorid)
+
+                        //Make sure the Origmsg contains text, if not replace it with empty string to replace it with "info or empty" info message
+                        if (typeof origmsg == 'undefined') {
+                            origmsg = ""
+                        }
+                        var banreasonstr
+                        var args = origmsg.split(' ');
+                        //Actually replace the text if there was none (pic uploads or embeds)
+                        if (Array.prototype.slice.call(args, 2).join(" ") == "") {
+                            banreasonstr = "no reason supplied or reported by Emoji"
+                        } else {
+                            banreasonstr = Array.prototype.slice.call(args, 2).join(" ");
+                        }
+
+                        var usertobanid = {
+                            serverID: Servertocheck,
+                            userID: msgidauthorarray[l].usertoban,
+                            reason: bot.users[reactinguserid].username + " by accepting the banproposal of " + bot.users[msgauthorid].username + " to ban " + bot.users[msgidauthorarray[l].usertoban].username + " for : " + banreasonstr,
+                            lastDays: 1
+                        }
+                        logger.verbose("trying to ban userid : " + msgidauthorarray[l].usertoban + " for" + usertobanid.reason);
+                        bot.ban(usertobanid);
+                        var embedtext = 'Alright, <@' + msgidauthorarray[l].usertoban + '> has been banned by ' + usertobanid.reason
+                        sendembed_basic(reactedinchannelid, 3066993, title, embedtext, Footertext);
+
+                        //Delete Admin Tag if setting is enabled
+                        logger.info("msgidauthorarray[l].anwsermsg at 309 + " + msgidauthorarray[l].anwsermsg)
+                        if (tagagrouponmissingrights) {
+                            var delparamsstrnotify = {
+                                channelID: reactedinchannelid,
+                                messageID: msgidauthorarray[l].anwsermsg
+                            }
+                            bot.deleteMessage(delparamsstrnotify);
+                        }
+
+
+                        if (deleteafterreaction) {
+                            logger.verbose("Removing our embed message due to reaction of protected user: " + reactingmessageid);
+                            var delparams = {
+                                channelID: reactedinchannelid,
+                                messageID: reactingmessageid
+                            }
+                            bot.deleteMessage(delparams);
+
+                        }
+
+                        //Delete orig report message for cleanup
+                        if (deleteorigreportmessage) {
+                            var delparams = {
+                                channelID: reactedinchannelid,
+                                messageID: msgidauthorarray[l].lastreportmsgid
+                            }
+                            logger.verbose("Original Message ID to delete (report)" + msgidauthorarray[l].lastreportmsgid)
+                            bot.deleteMessage(delparams);
+                        }
+                        //remove the banproposal from the list, search msgid first, then for userID.
+                        var indexof = banproposals.indexOf(banproposals[proposal])
+                        if (indexof == -1) {
+                            //Old code to check if the reportID is the embed msgID should never trigger
+                            indexof = banproposals.indexOf(reactingmessageid)
+                        }
+                        //logger.info("index of banproposal " + indexof )
+                        banproposals.splice(indexof, 1)
                     }
                 }
-                var banreasonstr
-                var args = origmsg.split(' ');
-                //logger.info(args[1])
-                if (Array.prototype.slice.call(args, 2).join(" ") == "") {
-                    banreasonstr = " his mesage: \n" + origmsg
-                } else {
-                    banreasonstr = Array.prototype.slice.call(args, 2).join(" ");
+                if (banproposals.length == 0) {
+                    reportisactive = false;
                 }
-
-                var usertobanid = {
-                    serverID: Servertocheck,
-                    userID: msgidauthorarray[listentry].usertoban,
-                    reason: bot.users[reactinguserid].username + " by accepting the banproposal of " + bot.users[msgauthorid].username + " to ban " + bot.users[msgidauthorarray[listentry].usertoban].username + " for : " + banreasonstr,
-                    lastDays: 1
+                logger.debug("Length of proposal array: " + banproposals.length)
+                logger.debug("reportisactive " + reportisactive)
+                if (!(reportisactive)) {
+                    break
                 }
-                logger.verbose("trying to ban userid : " + msgidauthorarray[listentry].usertoban + " for" + usertobanid.reason);
-                bot.ban(usertobanid);
-                var embedtext = 'Alright, <@' + msgidauthorarray[listentry].usertoban + '> has been banned by ' + usertobanid.reason
-                sendembed_basic(reactedinchannelid, 3066993, title, embedtext, Footertext);
-
-                //Check if orig message is from the reported user, if it is NOT we can delete it (as it was the report itself) 
-                //if (!origmsgauthor == msgidauthorarray[listentry].usertoban && Deletereportcommandswhenbanned){
-                logger.verbose("Original Message ID to delete (report)" + msgidauthorarray[listentry].origmsgid)
-
-                var delparamsstr = {
-                    channelID: reactedinchannelid,
-                    messageID: msgidauthorarray[listentry].origmsgid
-                }
-                bot.deleteMessage(delparamsstr);
             }
+
+            //new list entry (next loop ciclye)
         }
 
-        if (deleteafterreaction) {
-            logger.verbose("Removing our message due to reaction of protected user: " + reactingmessageid);
-            var delparams = {
-                channelID: reactedinchannelid,
-                messageID: reactingmessageid
-            }
-            bot.deleteMessage(delparams);
-        }
-        lastreportmsgid = 0;
-        reportisactive = false;
+
     } else if (bandeniedreaction.includes(emoji.name) && userisprotected && reportisactive) {
-        //Maybe proposal was declined? 
+        //Same as above, could be simplyfied in the same loop by checking the acept/deny reaction in there 
+        //(And depending on that we can delete the messages and ban, or just delete the report messages)
 
+        var proposalid, usertoban, anwsermessageid, isbotmsg, lastreportedmsgid, reportingauthor
+        for (var l in msgidauthorarray) {
+            for (var le in msgidauthorarray) {
+                if (msgidauthorarray[l].origmsgid == msgidauthorarray[le].msgid) {
+                    origmsg = msgidauthorarray[le].origmsg;
+                    origmsgauthor = msgidauthorarray[le].author;
+                    isbotmsg = msgidauthorarray[le].botmsg;
+                    lastreportedmsgid = msgidauthorarray[le].lastreportmsgid
+                }
+                if (msgidauthorarray[le].msgid == lastreportedmsgid) {
+                    reportingauthor = msgidauthorarray[le].author;
+                }
+            }
+
+            //make sure we only process the reacted to proposal, so figure out which proposal ID we are reacting to
+            if (msgidauthorarray[l].msgid == reactingmessageid) {
+                proposalid = msgidauthorarray[l].usertoban
+                origmsgid = msgidauthorarray[l].origmsgid
+
+                logger.info("proposalid == origmsgauthor :" + proposalid + " " + origmsgauthor)
+                logger.info("accepted proposal ID through Emoji: " + proposalid + "\n with params origmsgauthor  :" + origmsgauthor)
+                logger.info("msgidauthorarray[l].botmsg =" + msgidauthorarray[l].botmsg)
+                logger.info("is bot message :" + isbotmsg)
+                logger.info("reportingauthor :" + reportingauthor)
+
+                for (proposal in banproposals) {
+                    logger.info("Checking Proposal with ID: " + banproposals[proposal])
+                    //Only process current proposal
+                    if (proposalid == banproposals[proposal]) {
+                        logger.info("Found proposalID, processing " + banproposals[proposal])
+                        //&& msgidauthorarray[listentry].msgid == reactingmessageid as part above 
+                        logger.info("Proposal denied event recognised - processing proposal :" + proposalid)
+
+                        //Delete Admin Tag if setting is enabled
+                        logger.info("msgidauthorarray[l].anwsermsg at 309 + " + msgidauthorarray[l].anwsermsg)
+                        if (tagagrouponmissingrights) {
+                            var delparamsstrnotify = {
+                                channelID: reactedinchannelid,
+                                messageID: msgidauthorarray[l].anwsermsg
+                            }
+                            bot.deleteMessage(delparamsstrnotify);
+                        }
+
+
+                        if (deleteafterreaction) {
+                            logger.verbose("Removing our embed message due to reaction of protected user: " + reactingmessageid);
+                            var delparams = {
+                                channelID: reactedinchannelid,
+                                messageID: reactingmessageid
+                            }
+                            bot.deleteMessage(delparams);
+
+                        }
+
+                        //Delete orig report message for cleanup
+                        if (deleteorigreportmessage) {
+                            var delparams = {
+                                channelID: reactedinchannelid,
+                                messageID: msgidauthorarray[l].lastreportmsgid
+                            }
+                            logger.verbose("Original proposalid to delete (deny) " + proposalid)
+                            bot.deleteMessage(delparams);
+                        }
+                        //remove the banproposal from the list, search msgid first, then for userID.
+                        var indexof = banproposals.indexOf(banproposals[proposal])
+                        if (indexof == -1) {
+                            //Old code to check if the reportID is the embed msgID should never trigger
+                            indexof = banproposals.indexOf(reactingmessageid)
+                        }
+                        //logger.info("index of banproposal " + indexof )
+                        banproposals.splice(indexof, 1)
+                    }
+                }
+                if (banproposals.length == 0) {
+                    reportisactive = false;
+                }
+                logger.debug("Length of proposal array: " + banproposals.length)
+                logger.debug("reportisactive " + reportisactive)
+                if (!(reportisactive)) {
+                    //Try to break loop if not needed anymore, any optimzation is needed for a Server with 3K + Users
+                    break
+                }
+            }
+
+            //new list entry (next loop ciclye)
+        }
     }
 });
 
@@ -357,9 +509,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
                     top: 0,
                     width: picwidth,
                     height: picheight
-                }
-
-                ;
+                };
                 (async () => {
                     //Async call for rectangletop
                     await getTextFromImage(event.d.attachments[0].url, userID, event.d.id, channelID, rectangletop, userisprotected);
@@ -381,12 +531,12 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
     //check if this is a command and if we are in bot channel
     if (message.substring(0, 1) == commandprefix && (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0)) {
+        var argumentwasmsgidinstead = false
         logger.silly("entered command region - cmd recognised!");
         var args = message.substring(1).split(' ');
         var cmd = args[0];
         logger.silly("command:  " + cmd);
         //Mostly a Debuging function to test stuff - also helpfull for the planned known copy paste scam feature (catching libra and co scammers)
-
         //The simple version of Notify (if we dont want to use the unprivilidged user ban notify instead)
         //    if (message === "!Scammer") {
         //        bot.sendMessage({
@@ -400,6 +550,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
         //Ban users via Tag or ID if they already left the server 
         if (cmd === commandnametoban) {
+
             args.slice(2);
             var banReason = Array.prototype.slice.call(args, 2).join(" ");
             logger.silly("entered " + commandnametoban + " command region - cmd recognised!");
@@ -423,8 +574,17 @@ bot.on('message', function(user, userID, channelID, message, event) {
             if (tagsexist == false) {
                 //check if ID was valid ID judging by length
                 if (args[1].length == 18) {
-                    usertoban = args[1]
-                    suppliedvalidarg = true;
+                    var checkifitsamsg = bot.getMessage({
+                        channelID: channelID,
+                        messageID: args[1]
+                    });
+                    if (typeof checkifitsamsg == 'undefined') {
+                        usertoban = args[1]
+                        suppliedvalidarg = true;
+                    } else {
+                        argumentwasmsgidinstead = true
+                    }
+
                 }
                 logger.silly("arg 1 length: " + args[1].length)
                 logger.silly("suppliedvalidarg = " + suppliedvalidarg)
@@ -454,10 +614,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
                         }
                         bot.ban(usertobanid);
 
-                        usergotjustreported = false;
-                        reporteduserIDviaemoji = 0
-                        reporteduserIDviaemojibyuserid = 0
-                        reportisactive = false;
                         logger.info("trying to ban userid : " + usertoban + " for" + usertobanid.reason);
                         sendembed_basic(channelID, 3066993, "User Banned!", 'Alright, <@' + usertoban + '> has been banned for ' + usertobanid.reason, Footertext);
                     } catch (error) {
@@ -469,12 +625,16 @@ bot.on('message', function(user, userID, channelID, message, event) {
                 //Either user has no rights to call this command, or there was an Invalid Argument used 
                 var missingrightsmessage
                 var missingrightstitle
-                var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban` \nYou can also react using a " + banacceptedreaction + "-Emoji to accept this report and ban the User"
+                var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
                 if (mee6inteagration_cmdclear_enabled == true) {
                     usagestring += "\nIf I didn't clean up all spam automatically Mee6 might be able to help out with \n `!clear @usernametag numberofmsgs` \n"
                 }
                 //Check for errorconditions and set texts accordingly
                 if (suppliedvalidarg && targeteduserisnotprotected) {
+                    if (acceptanddenybans) {
+                        usagestring += "\nYou can also react to this embed using a " + banacceptedreaction[0] + "-Emoji to accept, or a " + bandeniedreaction[0] + " to deny this report immediatly!"
+                    }
+                    //logger.info("settings repordeuseridviaemoji in datastore to " + usertoban)
                     lastreportmsgid = event.d.id
                     usergotjustreported = true;
                     reporteduserIDviaemoji = usertoban
@@ -493,6 +653,9 @@ bot.on('message', function(user, userID, channelID, message, event) {
                 } else if (helpargument.includes(args[1]) == true) {
                     missingrightsmessage = 'Have a look at the Syntax below:'
                     missingrightstitle = "Need help?"
+                } else if (argumentwasmsgidinstead) {
+                    missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you entered a MessageID instead of a UserID.\nSee Usage below:'
+                    missingrightstitle = "Invalid Argument!"
                 } else if (!(args[1].length == 18)) {
                     missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you entered an invalid UserID.\nSee Usage below:'
                     missingrightstitle = "Invalid UserID!"
@@ -509,21 +672,26 @@ bot.on('message', function(user, userID, channelID, message, event) {
                 }
                 //Send differing embeds depending on data 
                 //Let's see if we are in a Bot channel, we may want to inform if we are not to use another channel
-                if (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0) {
+                if (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0 && !(banproposals.includes(usertoban))) {
                     //no need for "Reported user ID" section if it was invalid or a reported ID was a protected user
                     if (suppliedvalidarg == false || targeteduserisnotprotected == false) {
                         sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, "NONE", usagestring);
                     } else {
+
                         usergotjustreported = true;
-                        sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, usertoban, usagestring);
+                        reporteduserIDviaemoji = usertoban
+
+                        setTimeout(() => sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, usertoban, usagestring), 666);
                         if (tagagrouponmissingrights && suppliedvalidarg) {
-                            bot.sendMessage({
+
+                            setTimeout(() => bot.sendMessage({
                                 to: channelID,
                                 message: missingrightsnotifytags + " Have a look at this please, the reported ID is in the Info-Card"
                             }, (err, res) => {
-                                anwsermsgid = res.id
+                                anwsermsgid = (res.id);
+                                //	logger.info("anwserid: " + anwsermsgid)
+                            }), 1);
 
-                            });
                         }
                     }
                 }
@@ -534,40 +702,46 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
 
     //keep list of msg authors for later and set needed variables in array
+    var listobject
     if (usergotjustreported) {
-
-        var msgobj = {
-            channelID: channelID,
-            messageID: lastreportmsgid
+        //reporteduserIDviaemoji contains the userid of reported msgauthor
+        if (!(banproposals.includes(reporteduserIDviaemoji))) {
+            banproposals.push(reporteduserIDviaemoji)
         }
-
-        var listobject = {
+        var ind
+        setTimeout(() => ind = banproposals.indexOf(event.d.id), 1);
+        listobject = {
             msgid: event.d.id,
             author: userID,
             botmsg: true,
             usertoban: reporteduserIDviaemoji,
             reportedby: reporteduserIDviaemojibyuserid,
-            origmsgid: lastreportmsgid,
-            origmsg: message
+            origmsgid: event.d.id,
+            origmsg: message,
+            anwsermsg: anwsermsgid,
+            lastreportmsgid: event.d.id
         }
-        reporteduserIDviaemojibyuserid = 0
-        reporteduserIDviaemoji = 0
         usergotjustreported = false
-        lastreportmsgid = event.d.id
+        logger.info("reporteduserIDviaemoji (usertoban) set for this report msg: " + reporteduserIDviaemoji)
     } else {
-        var listobject = {
+        listobject = {
             msgid: event.d.id,
             author: userID,
             botmsg: false,
             usertoban: reporteduserIDviaemoji,
             reportedby: reporteduserIDviaemojibyuserid,
             origmsgid: event.d.id,
-            origmsg: message
+            origmsg: message,
+            anwsermsg: anwsermsgid,
+            lastreportmsgid: lastreportmsgid
         }
     }
 
     logger.silly("msgid: " + event.d.id + "from author: " + userID)
-    msgidauthorarray.push(listobject)
+    setTimeout(() => msgidauthorarray.push(listobject), 1111);
+    if (!(typeof listobject.anwsermsg == 'undefined')) {
+        logger.info("anwsermsgid after pushin list object in list: " + listobject.anwsermsg + "with msgid " + event.d.id)
+    }
 
 });
 
