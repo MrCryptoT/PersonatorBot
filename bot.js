@@ -188,7 +188,7 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                     if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid) {
                         //find user for current message - search array 
                         logger.verbose("Found correspondig Listentry in msgidauthorarray, checking values")
-
+						
                         msgauthorid = msgidauthorarray[listentry].author
                         reporteduserIDviaemoji = msgauthorid //will be grabed immendiatly after
                         var usertobanid = {
@@ -204,6 +204,15 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         var embedtext = 'Alright, <@' + msgauthorid + '> has been manually banned by ' + reactinguserid
                         sendembed_basic(reactedinchannelid, 3066993, title, embedtext, Footertext);
                         logger.verbose("Original Message ID to delete (report)" + msgidauthorarray[listentry].origmsgid)
+						//remove the banproposal from the list if 1 exists (might not exist yet, but cleanup to make sure)
+                        var indexof = banproposals.indexOf(usertoban)
+                        //logger.info("index of banproposal " + indexof )
+                       if (!(indexof == -1)){
+						   banproposals.splice(indexof, 1)
+					   } 
+			   if (banproposals.length == 0) {
+                    reportisactive = false;
+                }
                     }
                 } else {
                     //Report the user and keep and Entry of the Report if not reported already (no need for multiple info cars)
@@ -348,6 +357,9 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         }
                         //logger.info("index of banproposal " + indexof )
                         banproposals.splice(indexof, 1)
+			   if (banproposals.length == 0) {
+                    reportisactive = false;
+                }
                     }
                 }
                 if (banproposals.length == 0) {
@@ -432,13 +444,13 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                             bot.deleteMessage(delparams);
                         }
                         //remove the banproposal from the list, search msgid first, then for userID.
+						//In this case we know one exists, as we are reacting to 1 
                         var indexof = banproposals.indexOf(banproposals[proposal])
-                        if (indexof == -1) {
-                            //Old code to check if the reportID is the embed msgID should never trigger
-                            indexof = banproposals.indexOf(reactingmessageid)
-                        }
                         //logger.info("index of banproposal " + indexof )
                         banproposals.splice(indexof, 1)
+			   if (banproposals.length == 0) {
+                    reportisactive = false;
+                }
                     }
                 }
                 if (banproposals.length == 0) {
@@ -616,7 +628,18 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
                         logger.info("trying to ban userid : " + usertoban + " for" + usertobanid.reason);
                         sendembed_basic(channelID, 3066993, "User Banned!", 'Alright, <@' + usertoban + '> has been banned for ' + usertobanid.reason, Footertext);
-                    } catch (error) {
+                   logger.info("removing banproposal " + usertoban)
+						//remove the banproposal from the list if 1 exists (might not exist yet, but cleanup to make sure)
+                        var indexof = banproposals.indexOf(usertoban)
+                        //logger.info("index of banproposal " + indexof )
+                       if (!(indexof == -1)){
+						   banproposals.splice(indexof, 1)
+					   } 
+			   if (banproposals.length == 0) {
+                    reportisactive = false;
+                }
+
+				   } catch (error) {
                         sendembed_basic(channelID, 0x442691, "Couldn't Ban", 'couldn\'t ban User Sorry! Make sure you supply a correct ID or Tag. \n Also we cannot ban a user twice ;)', Footertext);
                         logger.error("couldn't ban User: " + usertoban);
                     }
@@ -672,6 +695,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
                 }
                 //Send differing embeds depending on data 
                 //Let's see if we are in a Bot channel, we may want to inform if we are not to use another channel
+				//Also prevent reporting a user twice, no need for that
                 if (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0 && !(banproposals.includes(usertoban))) {
                     //no need for "Reported user ID" section if it was invalid or a reported ID was a protected user
                     if (suppliedvalidarg == false || targeteduserisnotprotected == false) {
