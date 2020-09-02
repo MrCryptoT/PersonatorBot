@@ -1,9 +1,9 @@
 {
   "name": "PersonatorBot",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Fighting Impersonation",
   "main": "bot.js",
-  "author": "MrT",
+  "author": "MrCryptoT",
   "dependencies": {
     "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
     "tesseract.js": "^2.1.1",
