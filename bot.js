@@ -53,9 +53,6 @@ const {
     PSM,
     createScheduler
 } = require('C:\\_Custom\\PersonatorBot\\node_modules\\tesseract.js\\src');
-var Canvas = require('canvas');
-var https = require("https");
-var fs = require('fs');
 
 //Init Vars for use later
 var Memberstoprotect = [];
@@ -181,6 +178,12 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
             //If user is protected, simply ban the user
             var msgauthorid
             for (var listentry in msgidauthorarray) {
+				
+				if (!(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && (banproposals.includes(msgidauthorarray[listentry].author))){
+                         sendembed_basic(reactedinchannelid, 3066993, "Already Reported", "We already got a Report for this User, please be patient!", Footertext);
+				}
+				
+				
                 //Only check if user is admin, and is not reporting a bot (And is not reporting a protected user) 
                 if (userisprotected && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && !(banproposals.includes(msgidauthorarray[listentry].author))) {
                     //Ban the user (basically an easier report command without typing)
@@ -201,7 +204,7 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         logger.verbose("trying to ban userid : " + msgidauthorarray[listentry].usertoban + " for" + usertobanid.reason);
                         bot.ban(usertobanid);
                         reactingmessageid
-                        var embedtext = 'Alright, <@' + msgauthorid + '> has been manually banned by ' + reactinguserid
+                        var embedtext = 'Alright, <@' + msgauthorid + '> has been manually banned by <@' + reactinguserid + ">"
                         sendembed_basic(reactedinchannelid, 3066993, title, embedtext, Footertext);
                         logger.verbose("Original Message ID to delete (report)" + msgidauthorarray[listentry].origmsgid)
 						//remove the banproposal from the list if 1 exists (might not exist yet, but cleanup to make sure)
@@ -235,7 +238,7 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
 
                         if (tagagrouponmissingrights) {
                             reportmsg += "\nWe notified " + missingrightsnotifytags + " to take a look when possible."
-                            setTimeout(() => sendembed_report(reactedinchannelid, 0x442691, title, reportmsg, Footertext, msgauthorid, usagestring), 666);
+                            setTimeout(() => sendembed_report(reactedinchannelid, 0x442691, title, reportmsg, Footertext, msgauthorid, usagestring, "his Message " + messageReaction.d.message_id), 666);
 
 
                             setTimeout(() => bot.sendMessage({
@@ -653,7 +656,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
                     usagestring += "\nIf I didn't clean up all spam automatically Mee6 might be able to help out with \n `!clear @usernametag numberofmsgs` \n"
                 }
                 //Check for errorconditions and set texts accordingly
-                if (suppliedvalidarg && targeteduserisnotprotected) {
+                if (suppliedvalidarg && targeteduserisnotprotected && !(userID == usertoban) && !(helpargument.includes(args[1]) == true) && !(argumentwasmsgidinstead) ) {
                     if (acceptanddenybans) {
                         usagestring += "\nYou can also react to this embed using a " + banacceptedreaction[0] + "-Emoji to accept, or a " + bandeniedreaction[0] + " to deny this report immediatly!"
                     }
@@ -664,8 +667,9 @@ bot.on('message', function(user, userID, channelID, message, event) {
                     reporteduserIDviaemojibyuserid = userID
 
                     reportisactive = true;
-                    missingrightsmessage = '***Thanks alot*** for trying to help **' + user + '**, however you don\'t have the rights to use this command Sorry.'
-                    missingrightstitle = "Missing Rights!"
+					
+					missingrightsmessage = '***Thanks alot*** for trying to help **' + bot.users[userID].username + '**, We passed it on to our Mods!'
+                    missingrightstitle = "Thanks for the Report!"
                 } else if (userID == usertoban) {
                     missingrightsmessage = 'Banning yourself is a bit Silly isn\'t it?'
                     missingrightstitle = "That won't work!"
@@ -696,16 +700,21 @@ bot.on('message', function(user, userID, channelID, message, event) {
                 //Send differing embeds depending on data 
                 //Let's see if we are in a Bot channel, we may want to inform if we are not to use another channel
 				//Also prevent reporting a user twice, no need for that
+				if (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0  && (banproposals.includes(usertoban))){
+					if (suppliedvalidarg && targeteduserisnotprotected) {
+                         sendembed_basic(channelID, 3066993, "Already Reported", "We already got a Report for this User, please be patient!", Footertext);
+                    }
+				}
                 if (ChannelIDtorespondin.includes(channelID) || ChannelIDtorespondin.length == 0 && !(banproposals.includes(usertoban))) {
                     //no need for "Reported user ID" section if it was invalid or a reported ID was a protected user
                     if (suppliedvalidarg == false || targeteduserisnotprotected == false) {
-                        sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, "NONE", usagestring);
+                        sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, "NONE", usagestring, banReason);
                     } else {
 
                         usergotjustreported = true;
                         reporteduserIDviaemoji = usertoban
 
-                        setTimeout(() => sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, usertoban, usagestring), 666);
+                        setTimeout(() => sendembed_report(channelID, 0x442691, missingrightstitle, missingrightsmessage, Footertext, usertoban, usagestring, banReason), 666);
                         if (tagagrouponmissingrights && suppliedvalidarg) {
 
                             setTimeout(() => bot.sendMessage({
@@ -871,7 +880,7 @@ function sendembed_basic(channelID, color, titlestr, description, Footertext) {
     });
 }
 
-function sendembed_report(channelID, color, titlestr, description, Footertext, usertoban, usagestring) {
+function sendembed_report(channelID, color, titlestr, description, Footertext, usertoban, usagestring, banreason) {
     if (usertoban == "NONE") {
         bot.sendMessage({
             to: channelID,
@@ -899,8 +908,8 @@ function sendembed_report(channelID, color, titlestr, description, Footertext, u
                 title: titlestr,
                 description: description,
                 fields: [{
-                        name: "Reported User ID:",
-                        value: "When Admins look at this, please check the following ID: " + usertoban
+                        name: "Report:",
+                        value: "The UserID: " + usertoban + " was reported for " + banreason 
                     },
                     {
                         name: "Usage:",
