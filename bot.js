@@ -308,7 +308,7 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         if (Array.prototype.slice.call(args, 2).join(" ") == "") {
                             banreasonstr = "no reason supplied or reported by Emoji"
                         } else {
-                            banreasonstr = Array.prototype.slice.call(args, 2).join(" ");
+                            banreasonstr = Array.prototype.slice.call(args, 2).join(" ").replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');;
                         }
 
                         var usertobanid = {
@@ -567,7 +567,8 @@ bot.on('message', function(user, userID, channelID, message, event) {
         if (cmd === commandnametoban) {
 
             args.slice(2);
-            var banReason = Array.prototype.slice.call(args, 2).join(" ");
+            var banReason = Array.prototype.slice.call(args, 2).join(" ").replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
+			logger.info(banReason)
             logger.silly("entered " + commandnametoban + " command region - cmd recognised!");
             logger.silly('Arg1 ' + args[1]);
             logger.info('BanReason : ' + banReason);
