@@ -69,6 +69,8 @@ var reporteduserIDviaemojibyuserid
 var lastreportmsgid
 var anwsermsgid
 var banproposals = [] //List of all proposal ID's
+var lastguildMemberUpdateusername = ""
+var cachesareuptodate = true; 
 const {
     combine,
     timestamp,
@@ -101,14 +103,17 @@ const logger = winston.createLogger({
     transports: [
         new winston.transports.File({
             filename: 'error.log',
-            level: 'error'
+            level: 'error',
+            maxsize: 10000000
         }),
         new winston.transports.File({
-            filename: 'Log.log'
+            filename: 'Log.log',
+            maxsize: 10000000
         }),
         new winston.transports.File({
             filename: 'Debug.log',
-            level: 'silly'
+            level: 'silly',
+            maxsize: 100000000
         }),
         new winston.transports.Console({
             level: 'info',
@@ -156,14 +161,17 @@ bot.on('guildMemberAdd', function(member) {
 
 //Event fires on a name Change of a User already in our Guild
 bot.on('guildMemberUpdate', function(oldMember, newMember) {
-    logger.info('User renamed to: ' + newMember.username);
-    //Run a Check whenever a user changes his name
-    runcheck();
+	if ((lastguildMemberUpdateusername ==  newMember)){
+		lastguildMemberUpdateusername = newMember;
+	    logger.info('User renamed to: ' + newMember.username);
+		//Run a Check whenever a user changes his name
+		runcheck();	
+	}
 });
 
 //Event fires on a reaction to some Message
 bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
-
+	while(!(cachesareuptodate)){} //literally dead code to wait for data to be synced fully
     //Check if reacting user is a memeber of a protected Role
     userisprotected = isuserprotected(messageReaction.d.user_id)
     var reactingmessageid = messageReaction.d.message_id;
@@ -256,8 +264,8 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
             }
         }
     }
-    logger.silly("reactedinchannelid : " + reactingmessageid + " due to Reaction: " + emoji.name);
-    logger.info("reportisactive :" + reportisactive)
+    logger.silly("Reacted in Channel ID : " + reactingmessageid + " due to Reaction: " + emoji.name);
+    logger.info("Is there still an active Report? :" + reportisactive)
     if (banacceptedreaction.includes(emoji.name) && userisprotected && reportisactive) {
         var proposalid, usertoban, anwsermessageid, isbotmsg, lastreportedmsgid, reportingauthor
         for (var l in msgidauthorarray) {
@@ -278,12 +286,12 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                 proposalid = msgidauthorarray[l].usertoban
                 origmsgid = msgidauthorarray[l].origmsgid
 
-                logger.info("proposalid == origmsgauthor :" + proposalid + " " + origmsgauthor)
+                logger.silly("proposalid == origmsgauthor :" + proposalid + " " + origmsgauthor)
                 logger.info("accepted proposal ID through Emoji: " + proposalid + "\n with params origmsgauthor  :" + origmsgauthor)
-                logger.info("msgidauthorarray[l].botmsg =" + msgidauthorarray[l].botmsg)
-                logger.info("is bot message :" + isbotmsg)
-                logger.info("reportingauthor :" + reportingauthor)
-                logger.info("msgidauthorarray[l].anwsermsg :" + msgidauthorarray[l].anwsermsg)
+                logger.silly("msgidauthorarray[l].botmsg =" + msgidauthorarray[l].botmsg)
+                logger.silly("is bot message :" + isbotmsg)
+                logger.silly("reportingauthor :" + reportingauthor)
+                logger.silly("msgidauthorarray[l].anwsermsg :" + msgidauthorarray[l].anwsermsg)
                 for (proposal in banproposals) {
                     logger.info("Checking Proposal with ID: " + banproposals[proposal])
                     //Only process current proposal
@@ -323,8 +331,7 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         sendembed_basic(reactedinchannelid, 3066993, title, embedtext, Footertext);
 
                         //Delete Admin Tag if setting is enabled
-                        logger.info("msgidauthorarray[l].anwsermsg at 309 + " + msgidauthorarray[l].anwsermsg)
-                        if (tagagrouponmissingrights) {
+						if (tagagrouponmissingrights) {
                             var delparamsstrnotify = {
                                 channelID: reactedinchannelid,
                                 messageID: msgidauthorarray[l].anwsermsg
@@ -402,23 +409,22 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                 proposalid = msgidauthorarray[l].usertoban
                 origmsgid = msgidauthorarray[l].origmsgid
 
-                logger.info("proposalid == origmsgauthor :" + proposalid + " " + origmsgauthor)
-                logger.info("accepted proposal ID through Emoji: " + proposalid + "\n with params origmsgauthor  :" + origmsgauthor)
-                logger.info("msgidauthorarray[l].botmsg =" + msgidauthorarray[l].botmsg)
-                logger.info("is bot message :" + isbotmsg)
-                logger.info("reportingauthor :" + reportingauthor)
+                logger.debug("proposalid == origmsgauthor :" + proposalid + " " + origmsgauthor)
+                logger.debug("accepted proposal ID through Emoji: " + proposalid + "\n with params origmsgauthor  :" + origmsgauthor)
+                logger.debug("msgidauthorarray[l].botmsg =" + msgidauthorarray[l].botmsg)
+                logger.debug("is bot message :" + isbotmsg)
+                logger.debug("reportingauthor :" + reportingauthor)
 
                 for (proposal in banproposals) {
-                    logger.info("Checking Proposal with ID: " + banproposals[proposal])
+                    logger.silly("Checking Proposal with ID: " + banproposals[proposal])
                     //Only process current proposal
                     if (proposalid == banproposals[proposal]) {
-                        logger.info("Found proposalID, processing " + banproposals[proposal])
+                        logger.silly("Found proposalID, processing " + banproposals[proposal])
                         //&& msgidauthorarray[listentry].msgid == reactingmessageid as part above 
-                        logger.info("Proposal denied event recognised - processing proposal :" + proposalid)
+                        logger.debug("Proposal denied event recognised - processing proposal :" + proposalid)
 
                         //Delete Admin Tag if setting is enabled
-                        logger.info("msgidauthorarray[l].anwsermsg at 309 + " + msgidauthorarray[l].anwsermsg)
-                        if (tagagrouponmissingrights) {
+                         if (tagagrouponmissingrights) {
                             var delparamsstrnotify = {
                                 channelID: reactedinchannelid,
                                 messageID: msgidauthorarray[l].anwsermsg
@@ -449,7 +455,6 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         //remove the banproposal from the list, search msgid first, then for userID.
 						//In this case we know one exists, as we are reacting to 1 
                         var indexof = banproposals.indexOf(banproposals[proposal])
-                        //logger.info("index of banproposal " + indexof )
                         banproposals.splice(indexof, 1)
 			   if (banproposals.length == 0) {
                     reportisactive = false;
@@ -474,7 +479,7 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
-
+	while(!(cachesareuptodate)){} //literally dead code to wait for data to be synced fully
     var author = {
         serverID: Servertocheck,
         userID: userID,
@@ -568,10 +573,9 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
             args.slice(2);
             var banReason = Array.prototype.slice.call(args, 2).join(" ").replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '');
-			logger.info(banReason)
             logger.silly("entered " + commandnametoban + " command region - cmd recognised!");
             logger.silly('Arg1 ' + args[1]);
-            logger.info('BanReason : ' + banReason);
+            logger.debug('BanReason : ' + banReason);
             var tagsexist = false;
             var suppliedvalidarg = false
             usertoban = "";
@@ -632,10 +636,10 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
                         logger.info("trying to ban userid : " + usertoban + " for" + usertobanid.reason);
                         sendembed_basic(channelID, 3066993, "User Banned!", 'Alright, <@' + usertoban + '> has been banned for ' + usertobanid.reason, Footertext);
-                   logger.info("removing banproposal " + usertoban)
+                   logger.silly("removing banproposal " + usertoban)
 						//remove the banproposal from the list if 1 exists (might not exist yet, but cleanup to make sure)
                         var indexof = banproposals.indexOf(usertoban)
-                        //logger.info("index of banproposal " + indexof )
+
                        if (!(indexof == -1)){
 						   banproposals.splice(indexof, 1)
 					   } 
@@ -661,7 +665,6 @@ bot.on('message', function(user, userID, channelID, message, event) {
                     if (acceptanddenybans) {
                         usagestring += "\nYou can also react to this embed using a " + banacceptedreaction[0] + "-Emoji to accept, or a " + bandeniedreaction[0] + " to deny this report immediatly!"
                     }
-                    //logger.info("settings repordeuseridviaemoji in datastore to " + usertoban)
                     lastreportmsgid = event.d.id
                     usergotjustreported = true;
                     reporteduserIDviaemoji = usertoban
@@ -736,18 +739,23 @@ bot.on('message', function(user, userID, channelID, message, event) {
 
 
     //keep list of msg authors for later and set needed variables in array
-    var listobject
+    var listobject, isabotmsg
     if (usergotjustreported) {
         //reporteduserIDviaemoji contains the userid of reported msgauthor
         if (!(banproposals.includes(reporteduserIDviaemoji))) {
             banproposals.push(reporteduserIDviaemoji)
         }
-        var ind
-        setTimeout(() => ind = banproposals.indexOf(event.d.id), 1);
-        listobject = {
+
+		isabotmsg = true
+        usergotjustreported = false
+        logger.silly("reporteduserIDviaemoji (usertoban) set for this report msg: " + reporteduserIDviaemoji)
+    } else {
+            isabotmsg = false
+    }
+	listobject = {
             msgid: event.d.id,
             author: userID,
-            botmsg: true,
+            botmsg: isabotmsg,
             usertoban: reporteduserIDviaemoji,
             reportedby: reporteduserIDviaemojibyuserid,
             origmsgid: event.d.id,
@@ -755,33 +763,17 @@ bot.on('message', function(user, userID, channelID, message, event) {
             anwsermsg: anwsermsgid,
             lastreportmsgid: event.d.id
         }
-        usergotjustreported = false
-        logger.info("reporteduserIDviaemoji (usertoban) set for this report msg: " + reporteduserIDviaemoji)
-    } else {
-        listobject = {
-            msgid: event.d.id,
-            author: userID,
-            botmsg: false,
-            usertoban: reporteduserIDviaemoji,
-            reportedby: reporteduserIDviaemojibyuserid,
-            origmsgid: event.d.id,
-            origmsg: message,
-            anwsermsg: anwsermsgid,
-            lastreportmsgid: lastreportmsgid
-        }
-    }
-
     logger.silly("msgid: " + event.d.id + "from author: " + userID)
     setTimeout(() => msgidauthorarray.push(listobject), 1111);
     if (!(typeof listobject.anwsermsg == 'undefined')) {
-        logger.info("anwsermsgid after pushin list object in list: " + listobject.anwsermsg + "with msgid " + event.d.id)
+        logger.silly("anwsermsgid after pushin list object in list: " + listobject.anwsermsg + "with msgid " + event.d.id)
     }
 
 });
 
 function containsknownspam(message, userID, msgid, channelID, isuserprotected, onlyprintdebug = false) {
     if (onlyprintdebug) {
-        logger.verbose(message);
+        logger.silly(message);
         return false;
     }
     logger.debug("checking msg: " + message);
@@ -930,8 +922,8 @@ function sendembed_report(channelID, color, titlestr, description, Footertext, u
 
 function isuserprotected(userid) {
     //Check if messaging user is a memeber of a protected Role
-    logger.verbose("Bot is monitoring " + Memberstoprotect.length + " protected Usernames");
-    logger.verbose(Memberstoprotect);
+    logger.debug("Bot is monitoring " + Memberstoprotect.length + " protected Usernames");
+    logger.debug(Memberstoprotect);
     if (Memberstoprotect.includes(userid)) {
         return true;
     } else {
@@ -941,6 +933,7 @@ function isuserprotected(userid) {
 
 
 function Getalluserdataandbuildarrays() {
+	cachesareuptodate = false;
     logger.silly("Servers : " + bot.servers);
     //Grab all Users we know of on the Server to protect
 
@@ -1033,7 +1026,7 @@ function Getalluserdataandbuildarrays() {
     for (i = 0; i < Memberstoprotect.length - 1; i++) {
         logger.verbose(Memberstoprotect[i]);
     }
-
+	cachesareuptodate = true;
     if (userisprotected) {
         return true;
     } else {
