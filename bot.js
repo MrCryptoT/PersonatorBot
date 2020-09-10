@@ -163,7 +163,7 @@ bot.on('guildMemberAdd', function(member) {
 //Event fires on a name Change of a User already in our Guild
 bot.on('guildMemberUpdate', function(oldMember, newMember) {
 	eventisbeeingprocessed = true;
-	if ((lastguildMemberUpdateusername ==  newMember)){
+	if (!(lastguildMemberUpdateusername ==  newMember)){
 		lastguildMemberUpdateusername = newMember;
 		logger.info('User renamed to: ' + newMember.username);
 		//Run a Check whenever a user changes his name
