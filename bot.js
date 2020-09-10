@@ -59,8 +59,6 @@ var Memberstoprotect = [];
 var Membersnamestoprotect = [];
 var AllUsers;
 var AllUsersCache = [];
-var Memberstoban = [];
-var MembersIDtoban = [];
 var msgidauthorarray = [];
 var usergotjustreported = false;
 var reportisactive = false;
@@ -71,6 +69,7 @@ var anwsermsgid
 var banproposals = [] //List of all proposal ID's
 var lastguildMemberUpdateusername = ""
 var cachesareuptodate = true; 
+var eventisbeeingprocessed = false; 
 const {
     combine,
     timestamp,
@@ -104,16 +103,16 @@ const logger = winston.createLogger({
         new winston.transports.File({
             filename: 'error.log',
             level: 'error',
-            maxsize: 10000000
+			maxsize: 10000000
         }),
         new winston.transports.File({
             filename: 'Log.log',
-            maxsize: 10000000
+			maxsize: 10000000
         }),
         new winston.transports.File({
             filename: 'Debug.log',
             level: 'silly',
-            maxsize: 100000000
+			maxsize: 100000000
         }),
         new winston.transports.Console({
             level: 'info',
@@ -153,24 +152,29 @@ bot.on('disconnect', (msg, code) => {
 
 //Event fire's on new users joining the "guild" (guild = Discord Server - damn discord's programmers are Gaming oriented)
 bot.on('guildMemberAdd', function(member) {
+	eventisbeeingprocessed = true;
     logger.info(member.id + 'ID joined!');
     logger.info(member.discriminator + 'name!');
     //Run a Check whenever a new user joins
     runcheck();
+	eventisbeeingprocessed = false;
 });
 
 //Event fires on a name Change of a User already in our Guild
 bot.on('guildMemberUpdate', function(oldMember, newMember) {
+	eventisbeeingprocessed = true;
 	if ((lastguildMemberUpdateusername ==  newMember)){
 		lastguildMemberUpdateusername = newMember;
-	    logger.info('User renamed to: ' + newMember.username);
+		logger.info('User renamed to: ' + newMember.username);
 		//Run a Check whenever a user changes his name
 		runcheck();	
 	}
+	eventisbeeingprocessed = false;
 });
 
 //Event fires on a reaction to some Message
 bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
+	eventisbeeingprocessed = true;
 	while(!(cachesareuptodate)){} //literally dead code to wait for data to be synced fully
     //Check if reacting user is a memeber of a protected Role
     userisprotected = isuserprotected(messageReaction.d.user_id)
@@ -287,16 +291,16 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                 origmsgid = msgidauthorarray[l].origmsgid
 
                 logger.silly("proposalid == origmsgauthor :" + proposalid + " " + origmsgauthor)
-                logger.info("accepted proposal ID through Emoji: " + proposalid + "\n with params origmsgauthor  :" + origmsgauthor)
+                logger.silly("accepted proposal ID through Emoji: " + proposalid + "\n with params origmsgauthor  :" + origmsgauthor)
                 logger.silly("msgidauthorarray[l].botmsg =" + msgidauthorarray[l].botmsg)
                 logger.silly("is bot message :" + isbotmsg)
                 logger.silly("reportingauthor :" + reportingauthor)
                 logger.silly("msgidauthorarray[l].anwsermsg :" + msgidauthorarray[l].anwsermsg)
                 for (proposal in banproposals) {
-                    logger.info("Checking Proposal with ID: " + banproposals[proposal])
+                    logger.silly("Checking Proposal with ID: " + banproposals[proposal])
                     //Only process current proposal
                     if (proposalid == banproposals[proposal]) {
-                        logger.info("Found proposalID, processing " + banproposals[proposal])
+                        logger.silly("Found proposalID, processing " + banproposals[proposal])
                         //&& msgidauthorarray[listentry].msgid == reactingmessageid as part above 
 
                         logger.info("Proposal accepted event recognised - processing proposal :" + proposalid)
@@ -475,10 +479,12 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
             //new list entry (next loop ciclye)
         }
     }
+		eventisbeeingprocessed = false;
 });
 
 //Event that fires on new messages in the Server (Command)
 bot.on('message', function(user, userID, channelID, message, event) {
+	eventisbeeingprocessed = true;
 	while(!(cachesareuptodate)){} //literally dead code to wait for data to be synced fully
     var author = {
         serverID: Servertocheck,
@@ -763,12 +769,17 @@ bot.on('message', function(user, userID, channelID, message, event) {
             anwsermsg: anwsermsgid,
             lastreportmsgid: event.d.id
         }
+	//Cleanup the Msgauthorarray to prevent Mem overflows
+	var msgsperdaywith1msgaminute = 1440*1
+	if (msgidauthorarray.length > msgsperdaywith1msgaminute * 5){
+		msgidauthorarray.slice(1, msgidauthorarray.length)
+	}	
     logger.silly("msgid: " + event.d.id + "from author: " + userID)
     setTimeout(() => msgidauthorarray.push(listobject), 1111);
     if (!(typeof listobject.anwsermsg == 'undefined')) {
         logger.silly("anwsermsgid after pushin list object in list: " + listobject.anwsermsg + "with msgid " + event.d.id)
     }
-
+	eventisbeeingprocessed = false;
 });
 
 function containsknownspam(message, userID, msgid, channelID, isuserprotected, onlyprintdebug = false) {
@@ -934,6 +945,9 @@ function isuserprotected(userid) {
 
 function Getalluserdataandbuildarrays() {
 	cachesareuptodate = false;
+	//Wait for events to finish processing before rug pulling them
+	while(eventisbeeingprocessed){} //literally dead code to wait for data to be synced fully
+	
     logger.silly("Servers : " + bot.servers);
     //Grab all Users we know of on the Server to protect
 
@@ -1012,7 +1026,7 @@ function Getalluserdataandbuildarrays() {
         }
 
     }
-    Membersnamestoprotect = [];
+	Membersnamestoprotect = [];
     //Since we know which users are protected now, note down names to protect
     for (var user in bot.users) {
         if (Memberstoprotect.includes(bot.users[user].id)) {
@@ -1037,7 +1051,7 @@ function Getalluserdataandbuildarrays() {
 //Function to actualy build current user Array's and check for same username's
 function runcheck() {
     AllUsers = bot.servers[Servertocheck].members;
-    Memberstoban = [];
+
     tmpstring = "The following User's got";
     banReason = "Impersonation autodetection by PersonatorBot"
     var partialmatchfound = false;
@@ -1073,8 +1087,7 @@ function runcheck() {
                             tmpstring += " Warned - similar Names as protected User:\nID: " + bot.users[user].id + "  Handle: " + bot.users[user].username + "\n"
                         }
                         if (bot.users[user].username + bot.users[user].discriminator == bot.users[Memberstoprotect[Membersnamestoprotect.indexOf(bot.users[user].username)]].username + bot.users[Memberstoprotect[Membersnamestoprotect.indexOf(bot.users[user].username)]].discriminator) {
-                            Memberstoban.push(user);
-                            MembersIDtoban.push(bot.users[user].id);
+
                             logger.warn(punishaction + " User: " + user + " : " + bot.users[user].username);
                             //ban users
                             if (punishaction == "ban") {
@@ -1101,8 +1114,7 @@ function runcheck() {
                             }
                         }
                     } else {
-                        Memberstoban.push(user);
-                        MembersIDtoban.push(bot.users[user].id);
+
                         logger.info("Punishing User: " + user + " : " + bot.users[user].username);
                         //ban users
                         if (punishaction == "ban") {
