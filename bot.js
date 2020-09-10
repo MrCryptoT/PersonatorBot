@@ -1012,7 +1012,7 @@ function Getalluserdataandbuildarrays() {
         }
 
     }
-
+    Membersnamestoprotect = [];
     //Since we know which users are protected now, note down names to protect
     for (var user in bot.users) {
         if (Memberstoprotect.includes(bot.users[user].id)) {
