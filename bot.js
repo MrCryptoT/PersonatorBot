@@ -956,7 +956,7 @@ function Getalluserdataandbuildarrays() {
     var input = {
         limit: 99999,
     }
-    bot.getMembers(input);
+    setTimeout(() =>  bot.getMembers(input), 1500);
     //overwrite current userarray
     AllUserstmp = bot.servers[Servertocheck].members;
     //AllUsers = bot.users
