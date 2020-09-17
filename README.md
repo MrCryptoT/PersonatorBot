@@ -51,8 +51,8 @@ There are more variables to play around with, but above covers the important stu
 
 
 ## Run the Bot
-```node --max-old-space-size=8192 bot.js```
-(--max-old-space-size=8192 is only required on Huge Servers to not run into Memory limitations)
+```node bot.js```
+(--max-old-space-size=8192 could be used to supply more Memory, but be wear this probably indicates a Memleak somewhere, or an "overfilled" array)
 
 ## Screenshots: 
 ```!ban help``` <br>
