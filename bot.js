@@ -1023,10 +1023,10 @@ function Getalluserdataandbuildarrays() {
           //  AllUsersCache.push({
          //      userid: user,
           //      userisprotected: false
-            })
+            }
         }
 
-    }
+    
 	Membersnamestoprotect = [];
     //Since we know which users are protected now, note down names to protect
     for (var user in bot.users) {
