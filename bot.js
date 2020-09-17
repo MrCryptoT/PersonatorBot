@@ -103,21 +103,22 @@ const logger = winston.createLogger({
         new winston.transports.File({
             filename: 'error.log',
             level: 'error',
-			maxsize: 10000000
+			maxsize: 1024000
         }),
         new winston.transports.File({
             filename: 'Log.log',
-			maxsize: 10000000
+			maxsize: 1024000
         }),
         new winston.transports.File({
             filename: 'Debug.log',
             level: 'silly',
-			maxsize: 100000000
+			maxsize: 1024000
         }),
         new winston.transports.Console({
             level: 'info',
             'timestamp': true,
-            colorize: true
+            colorize: true,
+			maxsize: 1024000
         }),
     ],
 });
