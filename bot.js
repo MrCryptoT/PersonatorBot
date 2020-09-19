@@ -128,6 +128,9 @@ var bot = new Discord.Client({
     token: auth.token,
     autorun: true
 });
+//Initialize all Setintervall Functions whose loop's should only be started once (otherwise we spawn a new setintervall thread each time we reconnect which is ALOT)
+setInterval(() => Getalluserdataandbuildarrays(), 100000);
+
 
 bot.on('ready', function(evt) {
     logger.info('Connected, Bot ready');
@@ -139,7 +142,6 @@ bot.on('ready', function(evt) {
     bot.getMembers(input);
     //Build Arrays with protecteduser info, called all 10 minutes (will need top include some type of "running" indicator to prevent other code from running until rebuild finished)
     Getalluserdataandbuildarrays()
-    setInterval(() => Getalluserdataandbuildarrays(), 100000);
     //run a first check after startup to check for impersonators if feature is enabled 
     setTimeout(() => runcheck(), 2500);
 
@@ -502,7 +504,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
     //Check if messaging user is a memeber of a protected Role
     userisprotected = isuserprotected(userID); //we assume as protected users are allowed to ban for now - needs improvement.
     logger.debug("is user" + userID + " protected : " + userisprotected);
-    if (copypastespamprotectionenabled) {
+    if (copypastespamprotectionenabled && !(userisprotected)) {
         //Check if msg contains spam, if so, we don't need to check attatchment (prenet race conditions with async) 
         if (!containsknownspam(message, userID, event.d.id, userisprotected)) {
             //No spam in default msg, check if there is an attatchment URL, if so OCR it
