@@ -190,20 +190,24 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
     if (emoji.name == Reportemoji) {
         logger.debug("Reportemoji detected");
         if (Reportonemojireaction) {
+			
             //If user is protected, simply ban the user
             var msgauthorid
+			var alreadyreportedinformed = false
             for (var listentry in msgidauthorarray) {
 				
-				if (!(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && (banproposals.includes(msgidauthorarray[listentry].author))){
+
+				if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid && !(alreadyreportedinformed) && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && (banproposals.includes(msgidauthorarray[listentry].author))){
                          sendembed_basic(reactedinchannelid, 3066993, "Already Reported", "We already got a Report for this User, please be patient!", Footertext);
-				}
-				
-				
-                //Only check if user is admin, and is not reporting a bot (And is not reporting a protected user) 
-                if (userisprotected && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && !(banproposals.includes(msgidauthorarray[listentry].author))) {
-                    //Ban the user (basically an easier report command without typing)
+						alreadyreportedinformed = true;
+				} 
+				//Only check if user is admin, and is not reporting a bot (And is not reporting a protected user) 
+					
+				if (userisprotected && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && !(banproposals.includes(msgidauthorarray[listentry].author))) {
+			   	//Ban the user (basically an easier report command without typing)
                     logger.verbose("Entered reportemoji area - trying to figure out what to do")
                     if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid) {
+						
                         //find user for current message - search array 
                         logger.verbose("Found correspondig Listentry in msgidauthorarray, checking values")
 						
@@ -228,14 +232,18 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                        if (!(indexof == -1)){
 						   banproposals.splice(indexof, 1)
 					   } 
-			   if (banproposals.length == 0) {
-                    reportisactive = false;
-                }
-                    }
+					   if (banproposals.length == 0) {
+							reportisactive = false;
+						}
+                    
+				}	
                 } else {
+
+					
+					
                     //Report the user and keep and Entry of the Report if not reported already (no need for multiple info cars)
                     if (messageReaction.d.message_id == msgidauthorarray[listentry].msgid && !(msgidauthorarray[listentry].author == bot.id) && !(isuserprotected(msgidauthorarray[listentry].author)) && !(banproposals.includes(msgidauthorarray[listentry].author))) {
-
+		
                         var usagestring = "`" + commandprefix + commandnametoban + " @usernametag reason for the ban \n" + commandprefix + commandnametoban + " 412331231244123413 reason for the ban`"
                         if (acceptanddenybans) {
                             usagestring += " \nYou can also react to this embed using a " + banacceptedreaction[0] + "-Emoji to accept, or a " + bandeniedreaction[0] + " to deny this report immediatly!"
@@ -252,8 +260,9 @@ bot.on('messageReactionAdd', function(messageReaction, User, event, message) {
                         reportisactive = true;
 
                         if (tagagrouponmissingrights) {
+
                             reportmsg += "\nWe notified " + missingrightsnotifytags + " to take a look when possible."
-                            setTimeout(() => sendembed_report(reactedinchannelid, 0x442691, title, reportmsg, Footertext, msgauthorid, usagestring, "his Message " + messageReaction.d.message_id), 666);
+                            setTimeout(() => sendembed_report(reactedinchannelid, 0x442691, title, reportmsg, Footertext, msgauthorid, usagestring, "the Message with ID:" + messageReaction.d.message_id) + ")", 666);
 
 
                             setTimeout(() => bot.sendMessage({
@@ -603,6 +612,7 @@ bot.on('message', function(user, userID, channelID, message, event) {
             if (tagsexist == false) {
                 //check if ID was valid ID judging by length
                 if (args[1].length == 18) {
+
                     var checkifitsamsg = bot.getMessage({
                         channelID: channelID,
                         messageID: args[1]
@@ -916,7 +926,7 @@ function sendembed_report(channelID, color, titlestr, description, Footertext, u
                 description: description,
                 fields: [{
                         name: "Report:",
-                        value: "The UserID: " + usertoban + " was reported for " + banreason 
+                        value: "The User <@" + usertoban + "> (ID: " + usertoban + ") was reported for " + banreason 
                     },
                     {
                         name: "Usage:",
