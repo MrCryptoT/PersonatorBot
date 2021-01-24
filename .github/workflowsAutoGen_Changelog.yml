@@ -1,0 +1,42 @@
+# This is a basic workflow to help you get started with Actions
+
+name: AutoGen Changelog
+
+# Controls when the action will run. 
+on:
+  # Only Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs a single command using the runners shell
+      - name: Install GREN Bot
+        run: sudo npm install github-release-notes -g
+
+      # Runs a set of commands using the runners shell
+      - name: Build Changelog based on Issues
+        run: |
+         gren release --username=MrCryptoT --repo=mwc-qt-wallet -T $GREN_TOKEN --override
+         echo Do we need to push this somewhere or will it actually create the .md for us? Lets see
+        env:
+          #This accesses a secret Env Variable stored for this Repo. Needs to contain a "Personal access token" for "Repo" Scope that has access. (A Dev can create this token himself - only works if he has access to the repo obviously) 
+          GREN_TOKEN: ${{ secrets.GREN_PAT }}
+
+      # Runs a set of commands using the runners shell
+      - name: Build Changelog based on Commits (and append below)
+        run: |
+         gren release --username=MrCryptoT --repo=mwc-qt-wallet -T $GREN_TOKEN -D commits --override
+         echo Do we need to push this somewhere or will it actually create the .md for us? Lets see
+        env:
+          #This accesses a secret Env Variable stored for this Repo. Needs to contain a "Personal access token" for "Repo" Scope that has access. (A Dev can create this token himself - only works if he has access to the repo obviously) 
+          GREN_TOKEN: ${{ secrets.GREN_PAT }}
