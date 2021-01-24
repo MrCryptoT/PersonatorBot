@@ -33,7 +33,7 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Build Changelog based on Issues
         run: |
-         gren changelog --generate --override --changelog-filename=RELEASE_NOTES_Features.md --repo=mwc-qt-wallet -T $GREN_TOKEN
+         gren changelog --generate --override --changelog-filename=RELEASE_NOTES_Features.md --repo=PersonatorBot -T $GREN_TOKEN
         # gren release --username=MrCryptoT --repo=mwc-qt-wallet -T $GREN_TOKEN --override 
         
         env:
@@ -43,7 +43,7 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Build Changelog based on Commits (and append below)
         run: |
-         gren changelog --generate --override --changelog-filename=RELEASE_NOTES_Commits.md --username=MrCryptoT --repo=mwc-qt-wallet -T $GREN_TOKEN -D commits --override  
+         gren changelog --generate --override --changelog-filename=RELEASE_NOTES_Commits.md --username=MrCryptoT --repo=PersonatorBot -T $GREN_TOKEN -D commits --override  
          
         env:
           #This accesses a secret Env Variable stored for this Repo. Needs to contain a "Personal access token" for "Repo" Scope that has access. (A Dev can create this token himself - only works if he has access to the repo obviously) 
